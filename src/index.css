@@ -1,0 +1,206 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --font-sans: "Inter", "Noto Sans Devanagari", "Noto Sans Telugu", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  
+  --color-slate-900: #1A202C;
+  --color-slate-700: #4A5568;
+  --color-gold-600: #B7791F;
+  --color-gold-500: #D69E2E;
+  --color-green-700: #2F855A;
+  --color-red-700: #C53030;
+  
+  --color-gov-primary: #1A202C;
+  --color-gov-secondary: #4A5568;
+  --color-gov-accent: #B7791F;
+}
+
+/* Base resets & focus styles */
+body {
+  font-family: var(--font-sans);
+  background-color: #F7FAFC;
+  color: #1A202C;
+}
+
+/* Custom Accessibility High Contrast Mode overrides */
+.high-contrast {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+.high-contrast * {
+  border-color: #FFFFFF !important;
+}
+.high-contrast .border-gov-accent,
+.high-contrast .text-gov-accent {
+  color: #FFFF00 !important;
+  border-color: #FFFF00 !important;
+}
+.high-contrast button, .high-contrast a {
+  background-color: #000000 !important;
+  color: #FFFF00 !important;
+  border: 1px solid #FFFF00 !important;
+}
+.high-contrast input, .high-contrast textarea, .high-contrast select {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+}
+
+/* Subtle gold underline helper for legal glossary tooltips */
+.legal-term-underline {
+  border-bottom: 2px dotted #B7791F;
+  cursor: help;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.legal-term-underline:hover {
+  background-color: rgba(183, 121, 31, 0.1);
+}
+
+/* Custom highlight class for spoken text synchronization */
+.speech-highlight {
+  background-color: rgba(214, 158, 46, 0.25); /* soft gold / brass highlight */
+  border-bottom: 2px solid #D69E2E;
+  transition: all 0.25s ease;
+}
+
+/* Claymorphism and clean institutional styling effects */
+.clay-card {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E0;
+  box-shadow: 
+    0px 1px 2px rgba(0, 0, 0, 0.05),
+    inset 0px -2px 0px rgba(0, 0, 0, 0.02);
+}
+
+.gov-gradient-top {
+  border-top: 4px solid #B7791F;
+}
+
+/* Print Specific High-Contrast Stylesheet */
+@media print {
+  /* Set entire screen elements invisible */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Make only the print container and its contents visible */
+  #citizen-print-overlay-document,
+  #citizen-print-overlay-document * {
+    visibility: visible;
+  }
+  
+  /* Position target element cleanly at the top of the physical page */
+  #citizen-print-overlay-document {
+    visibility: visible !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    display: block !important;
+    background-color: white !important;
+    color: black !important;
+  }
+
+  /* Prevent split comparative items from breaking across page boundaries */
+  .page-break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+/* Custom Eye-Strain Reducing Dark Mode theme overrides */
+.dark-mode {
+  background-color: #0F172A !important;
+  color: #E2E8F0 !important;
+}
+
+.dark-mode body {
+  background-color: #0F172A !important;
+  color: #E2E8F0 !important;
+}
+
+/* Let's style header elements */
+.dark-mode header#main_header {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+}
+
+/* Clay cards and standard container elements */
+.dark-mode .clay-card,
+.dark-mode .bg-white,
+.dark-mode [class*="bg-white"] {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Text boxes, inputs and text areas */
+.dark-mode input,
+.dark-mode textarea,
+.dark-mode select {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #475569 !important;
+}
+
+/* Form and text element styling */
+.dark-mode .text-slate-800,
+.dark-mode .text-slate-900,
+.dark-mode .text-slate-700,
+.dark-mode .text-slate-650,
+.dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode h4, .dark-mode h5, .dark-mode h6 {
+  color: #F8FAFC !important;
+}
+
+.dark-mode .text-slate-500,
+.dark-mode .text-slate-600 {
+  color: #94A3B8 !important;
+}
+
+.dark-mode .text-slate-405,
+.dark-mode .text-slate-400 {
+  color: #64748B !important;
+}
+
+.dark-mode .bg-slate-50,
+.dark-mode .bg-slate-100,
+.dark-mode .bg-slate-50\/50,
+.dark-mode .bg-slate-50\/10 {
+  background-color: #1E293B !important;
+}
+
+.dark-mode .border-slate-100,
+.dark-mode .border-slate-200,
+.dark-mode .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+.dark-mode .bg-slate-900 {
+  background-color: #0F172A !important;
+}
+
+/* Sparkline Drawing Animation */
+@keyframes draw-sparkline {
+  from {
+    stroke-dashoffset: 500;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.sparkline-draw-animate {
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: draw-sparkline 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+

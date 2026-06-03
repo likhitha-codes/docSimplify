@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Connectivity test documents
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Collection: users
+    match /users/{email} {
+      // Allow read to let citizens look up their associated email by phone number before authentication
+      allow read: if true;
+
+      // Allow write if the user is authenticated and the email matches their auth record
+      allow create, update: if isSignedIn() && request.auth.token.email.lower() == email;
+      allow delete: if false;
+    }
+  }
+}

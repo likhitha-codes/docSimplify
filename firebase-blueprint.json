@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Registered citizen profile on the portal",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "phoneNumber": { "type": "string", "description": "Standardized or original mobile number" },
+        "displayName": { "type": "string", "description": "Citizen full name" }
+      },
+      "required": ["email"]
+    },
+    "TestConnection": {
+      "title": "Test Connection",
+      "description": "Firestore connectivity test document",
+      "type": "object",
+      "properties": {
+        "ok": { "type": "boolean", "description": "Status indicator" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{email}": {
+      "schema": "User",
+      "description": "Collection of registered portal citizens"
+    },
+    "/test/{docId}": {
+      "schema": "TestConnection",
+      "description": "Collection of connectivity test documents"
+    }
+  }
+}

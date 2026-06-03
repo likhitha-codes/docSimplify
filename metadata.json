@@ -1,0 +1,6 @@
+{
+  "name": "DocuEase",
+  "description": "Official Document Simplification & Translation Engine for official government documents, welfare schemes, and legal circulars.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
