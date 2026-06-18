@@ -261,7 +261,7 @@ export default function App() {
           name: file.name,
           size: (file.size / 1024 / 1024).toFixed(2) + " MB",
           type: "text/plain",
-          base64: null
+          base64: ""
         });
       };
       reader.readAsText(file);
@@ -659,6 +659,18 @@ export default function App() {
   };
 
   // Dynamic sentence extraction helper
+  // Ensure section headings/labels always start on their own line,
+  // even when the model omits newlines in the JSON output.
+  const normalizeDocText = (text: string): string => {
+    if (!text) return text;
+    let t = text.replace(/\*\*/g, "");
+    // Insert newline before markdown headings (# Foo)
+    t = t.replace(/([^\n])(#+\s)/g, "$1\n$2");
+    // Insert newline before ALL-CAPS section labels like "HOLDER INFORMATION:" or "WHAT THIS MEANS FOR YOU:"
+    t = t.replace(/([a-z.!?,।])\s+([A-Z][A-Z\s]{3,}:)/g, "$1\n$2");
+    return t;
+  };
+
   const splitIntoSentences = (text: string): string[] => {
     if (!text) return [];
     // Regular expression that honors Telugu/Hindi patterns & English full stops
@@ -1465,7 +1477,7 @@ export default function App() {
                           <div className="flex flex-col">
                             <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded uppercase inline-block mb-3 w-fit">Simplified English</span>
                             <div className="text-sm leading-relaxed text-gray-800 flex-1 space-y-3" id="english_simplified_text">
-                              {currentResult.simplifiedEnglish.split(/\n+/).map((para, pIdx) => {
+                              {normalizeDocText(currentResult.simplifiedEnglish).split(/\n+/).map((para, pIdx) => {
                                 const cleaned = para.replace(/\*\*/g, "").trim();
                                 if (!cleaned) return null;
                                 const isHeading = /^#+\s/.test(cleaned);
@@ -1474,7 +1486,7 @@ export default function App() {
                                   return <p key={pIdx} className="font-bold text-gray-900 mt-2">{text}</p>;
                                 }
                                 const sentences = splitIntoSentences(text);
-                                const offset = currentResult.simplifiedEnglish.split(/\n+/).slice(0, pIdx).reduce((acc, p) => acc + splitIntoSentences(p.replace(/^#+\s*/, "").replace(/\*\*/g, "")).length, 0);
+                                const offset = normalizeDocText(currentResult.simplifiedEnglish).split(/\n+/).slice(0, pIdx).reduce((acc, p) => acc + splitIntoSentences(p.replace(/^#+\s*/, "").replace(/\*\*/g, "")).length, 0);
                                 return (
                                   <p key={pIdx}>
                                     {sentences.map((sent, sIdx) => (
@@ -1514,7 +1526,7 @@ export default function App() {
                                 {selectedLang === "te" ? "Telugu | తెలుగు" : "Hindi | हिन्दी"}
                               </span>
                               <div className="text-sm leading-relaxed text-gray-800 flex-1 tracking-wide space-y-3" id="translated_target_text">
-                                {(selectedLang === "te" ? currentResult.teluguTranslation : currentResult.hindiTranslation)
+                                {normalizeDocText(selectedLang === "te" ? currentResult.teluguTranslation : currentResult.hindiTranslation)
                                   .split(/\n+/)
                                   .map((para, pIdx) => {
                                     const cleaned = para.replace(/\*\*/g, "").trim();
