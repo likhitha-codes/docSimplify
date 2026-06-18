@@ -17,7 +17,7 @@ declare global {
     }
   }
 }
-import { Shield, KeyRound, Mail, UserPlus, FileCheck, ArrowRight, X, Phone, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Shield, KeyRound, Mail, UserPlus, FileCheck, ArrowRight, Phone, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { UserProfile } from "../types";
 import { auth, db } from "../lib/firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -326,375 +326,226 @@ export default function AuthPortal({ onLoginSuccess, onClose }: AuthPortalProps)
 
 
   return (
-    <div className="clay-card rounded-lg border-t-4 border-t-gov-accent overflow-hidden max-w-md w-full mx-auto bg-white shadow-xl" id="auth_portal_card">
-      {/* Header Banner */}
-      <div className="bg-slate-900 p-5 text-white relative">
+    <div className="w-full h-full bg-white overflow-hidden flex min-h-screen" id="auth_portal_card">
+
+      {/* LEFT: Form Panel */}
+      <div className="w-full md:w-1/2 p-8 flex flex-col justify-center relative">
+        {/* Back button */}
         {onClose && (
-          <button 
-            type="button" 
-            onClick={onClose}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
-            aria-label="Close authentication gateway"
-            id="close_auth_btn"
-          >
-            <X size={20} />
+          <button type="button" onClick={onClose} className="absolute top-6 left-6 flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition cursor-pointer" id="close_auth_btn">
+            <ArrowLeft size={16} />
+            <span>Back</span>
           </button>
         )}
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-slate-800 rounded-full" style={{ color: "#B7791F" }}>
-            <Shield size={24} />
-          </div>
-          <div className="flex-1">
-            <h2 className="font-sans font-bold text-lg tracking-tight">GovSecure Gateway</h2>
-            <p className="text-xs text-slate-300">National Single Sign-On Portal</p>
-          </div>
-        </div>
-      </div>
 
-      <div className="p-6 space-y-4">
-        {/* Secure Note */}
-        <div className="bg-slate-50 border border-slate-200 p-3 rounded text-xs text-slate-600 flex items-start gap-2">
-          <FileCheck className="text-gov-accent shrink-0 mt-0.5" size={16} />
-          <span>
-            This is a secure institutional access gateway. Authenticate to track digital audit history, pin simplified welfare laws, and secure your <b>Trust Score</b>.
-          </span>
-        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-1">{isRegistering ? "Create account" : "Login"}</h2>
+        <p className="text-sm text-gray-400 mb-6">{isRegistering ? "Register to access DocuEase" : "Welcome back to DocuEase"}</p>
 
         {errorMsg && (
-          <div className="p-3 bg-red-50 text-red-700 text-xs rounded border border-red-200 whitespace-pre-line" role="alert">
-            {errorMsg}
-          </div>
+          <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200 whitespace-pre-line" role="alert">{errorMsg}</div>
         )}
 
-        {/* LOADING STATE DISPLAY */}
         {isSubmitting ? (
-          <div className="py-8 flex flex-col items-center justify-center text-center space-y-3">
-            <span className="inline-block w-8 h-8 border-4 border-gov-accent border-t-transparent rounded-full animate-spin"></span>
-            <p className="text-xs font-semibold text-slate-800 animate-pulse">{submittingStatus}</p>
-            <p className="text-[10px] text-slate-400">Verifying biometric databases & credentials...</p>
+          <div className="py-10 flex flex-col items-center gap-3 text-center">
+            <span className="w-9 h-9 border-4 border-blue-600 border-t-transparent rounded-full animate-spin inline-block" />
+            <p className="text-sm font-semibold text-gray-700 animate-pulse">{submittingStatus}</p>
+          </div>
+        ) : isRegistering ? (
+          /* REGISTER FORM */
+          <form onSubmit={handleSubmit} className="space-y-3" id="register_form">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="reg_firstname">First Name</label>
+                <input id="reg_firstname" type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="John"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="reg_lastname">Last Name</label>
+                <input id="reg_lastname" type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Doe (optional)"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="reg_phone">Phone Number</label>
+              <div className="relative">
+                <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input id="reg_phone" type="tel" required value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} placeholder="+91 9876543210"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="reg_email">Email Address</label>
+              <div className="relative">
+                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input id="reg_email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="reg_password">Password</label>
+              <div className="relative">
+                <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input id="reg_password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} placeholder="Create a password"
+                  className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer outline-none">
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+            <button id="auth_submit_btn" type="submit" className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm mt-1">
+              Create Account <ArrowRight size={15} />
+            </button>
+            <p className="text-center text-xs text-gray-400 pt-1">
+              Already have an account?{" "}
+              <button type="button" onClick={() => { setIsRegistering(false); setSelectedLoginMethod(null); }} className="text-blue-600 font-semibold hover:underline cursor-pointer" id="toggle_register_btn">
+                Sign in
+              </button>
+            </p>
+          </form>
+        ) : selectedLoginMethod === null ? (
+          /* LOGIN METHOD SELECTION */
+          <div className="space-y-3">
+            <button type="button" onClick={() => setSelectedLoginMethod("email")} id="login_opt_email"
+              className="w-full p-3.5 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50/30 rounded-xl text-left flex items-center gap-3 transition group cursor-pointer">
+              <div className="p-2 bg-gray-100 group-hover:bg-blue-100 rounded-lg transition">
+                <Mail size={17} className="text-gray-500 group-hover:text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-800">Continue with Email</p>
+                <p className="text-[11px] text-gray-400">Sign in using your email address</p>
+              </div>
+              <ChevronRightArrow />
+            </button>
+            <button type="button" onClick={() => setSelectedLoginMethod("phone")} id="login_opt_phone"
+              className="w-full p-3.5 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50/30 rounded-xl text-left flex items-center gap-3 transition group cursor-pointer">
+              <div className="p-2 bg-gray-100 group-hover:bg-blue-100 rounded-lg transition">
+                <Phone size={17} className="text-gray-500 group-hover:text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-800">Continue with Phone</p>
+                <p className="text-[11px] text-gray-400">Sign in using your phone number</p>
+              </div>
+              <ChevronRightArrow />
+            </button>
+            <p className="text-center text-xs text-gray-400 pt-2">
+              No account yet?{" "}
+              <button type="button" id="toggle_register_btn" onClick={() => { setIsRegistering(true); setFirstName(""); setLastName(""); setPhoneNumber(""); }} className="text-blue-600 font-semibold hover:underline cursor-pointer">
+                Register
+              </button>
+            </p>
           </div>
         ) : (
-          <>
-            {/* REGISTERING VIEW FOR THE FIRST TIME */}
-            {isRegistering ? (
-              <form onSubmit={handleSubmit} className="space-y-3" id="register_form">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="reg_firstname">
-                      First Name
-                    </label>
-                    <input
-                      id="reg_firstname"
-                      type="text"
-                      required
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="e.g., John"
-                      className="w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="reg_lastname">
-                      Last Name (Optional)
-                    </label>
-                    <input
-                      id="reg_lastname"
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="e.g., Doe"
-                      className="w-full px-3 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                    />
+          /* EMAIL / PHONE LOGIN FORM */
+          <form onSubmit={handleSubmit} className="space-y-3" id="sub_login_form">
+            <button type="button" onClick={() => { setSelectedLoginMethod(null); setErrorMsg(""); }} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 font-medium mb-1 cursor-pointer">
+              <ArrowLeft size={13} /> Back
+            </button>
+
+            {selectedLoginMethod === "email" ? (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="login_email">Email Address</label>
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input id="login_email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                   </div>
                 </div>
-
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="reg_phone">
-                    Phone Number
-                  </label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="login_password_email">Password</label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                      <Phone size={14} />
-                    </span>
-                    <input
-                      id="reg_phone"
-                      type="tel"
-                      required
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="e.g., +91 9876543210"
-                      className="w-full pl-9 pr-3 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="reg_email">
-                    Official Email Address
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                      <Mail size={14} />
-                    </span>
-                    <input
-                      id="reg_email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="resident@nic.in"
-                      className="w-full pl-9 pr-3 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="reg_password">
-                    Secure Digital Password
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                      <KeyRound size={14} />
-                    </span>
-                    <input
-                      id="reg_password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter a password"
-                      className="w-full pl-9 pr-9 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 outline-none"
-                    >
+                    <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input id="login_password_email" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password"
+                      className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer outline-none">
                       {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
                 </div>
-
-                <button
-                  id="auth_submit_btn"
-                  type="submit"
-                  className="w-full mt-2 py-2 bg-gov-primary hover:bg-slate-800 text-white font-medium text-sm rounded flex items-center justify-center gap-2 transition-colors duration-150 shadow-sm cursor-pointer"
-                >
-                  <span>Confirm Registration</span>
-                  <ArrowRight size={16} />
-                </button>
-
-                <div className="text-center pt-2 border-t border-slate-100">
-                  <button
-                    id="toggle_register_btn"
-                    type="button"
-                    className="text-xs text-gov-accent font-medium hover:underline focus:outline-none"
-                    onClick={() => {
-                      setIsRegistering(false);
-                      setSelectedLoginMethod(null);
-                    }}
-                  >
-                    Already integrated? Access Login Options
-                  </button>
-                </div>
-              </form>
+              </>
             ) : (
-              /* LOGIN SELECTION FLOW OR TRIGGER SUITE */
-              <div className="space-y-4">
-                {selectedLoginMethod === null ? (
-                  /* THREE OPTION SELECTION FOR LOGIN */
-                  <div className="space-y-2.5">
-                    <p className="text-xs text-slate-500 font-bold mb-1 block uppercase tracking-wider text-center">Choose Identity Verification Preference</p>
-                    
-                    {/* Method 1: Email */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedLoginMethod("email")}
-                      className="w-full p-3.5 bg-white border border-slate-200 hover:border-gov-accent hover:bg-amber-50/10 rounded-lg text-left flex items-center gap-3.5 transition-all shadow-sm group cursor-pointer"
-                      id="login_opt_email"
-                    >
-                      <div className="p-2.5 bg-slate-100 text-slate-700 group-hover:bg-amber-50 group-hover:text-gov-accent rounded-full transition-colors">
-                        <Mail size={18} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-bold text-slate-800">Login through Email</div>
-                        <div className="text-[10px] text-slate-400">Secure entry via official mailbox coordinates</div>
-                      </div>
-                      <ChevronRightArrow />
-                    </button>
-
-                    {/* Method 2: Phone */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedLoginMethod("phone")}
-                      className="w-full p-3.5 bg-white border border-slate-200 hover:border-gov-accent hover:bg-amber-50/10 rounded-lg text-left flex items-center gap-3.5 transition-all shadow-sm group cursor-pointer"
-                      id="login_opt_phone"
-                    >
-                      <div className="p-2.5 bg-slate-100 text-slate-700 group-hover:bg-amber-50 group-hover:text-gov-accent rounded-full transition-colors">
-                        <Phone size={18} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-bold text-slate-800">Login through Phone</div>
-                        <div className="text-[10px] text-slate-400">Multi-point identity verification using cellular lines</div>
-                      </div>
-                      <ChevronRightArrow />
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="login_phone">Phone Number</label>
+                  <div className="relative">
+                    <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input id="login_phone" type="tel" required value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} placeholder="9876543210"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1" htmlFor="login_pin_phone">Password / PIN</label>
+                  <div className="relative">
+                    <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input id="login_pin_phone" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password or PIN"
+                      className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer outline-none">
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
-                ) : (
-                  /* SUBFORMS (EMAIL / PHONE SPECIFIC INTERFACES) */
-                  <form onSubmit={handleSubmit} className="space-y-3" id="sub_login_form">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedLoginMethod(null);
-                        setErrorMsg("");
-                      }}
-                      className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 font-semibold mb-2"
-                    >
-                      <ArrowLeft size={13} /> Back to Sign-In selection
-                    </button>
-
-                    {selectedLoginMethod === "email" && (
-                      <>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="login_email">
-                            Official Email Address
-                          </label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                              <Mail size={14} />
-                            </span>
-                            <input
-                              id="login_email"
-                              type="email"
-                              required
-                              value={email}
-                              onChange={(e) => setEmail(e.target.value)}
-                              placeholder="e.g., john.doe@gov.in"
-                              className="w-full pl-9 pr-3 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="login_password_email">
-                            Secure Signature Password
-                          </label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                              <KeyRound size={14} />
-                            </span>
-                            <input
-                              id="login_password_email"
-                              type={showPassword ? "text" : "password"}
-                              required
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              placeholder="Enter your password"
-                              className="w-full pl-9 pr-9 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 outline-none"
-                            >
-                              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {selectedLoginMethod === "phone" && (
-                      <>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="login_phone">
-                            Registered Phone Number
-                          </label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                              <Phone size={14} />
-                            </span>
-                            <input
-                              id="login_phone"
-                              type="tel"
-                              required
-                              value={phoneNumber}
-                              onChange={(e) => setPhoneNumber(e.target.value)}
-                              placeholder="e.g., 9876543210"
-                              className="w-full pl-9 pr-3 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-0.5" htmlFor="login_pin_phone">
-                            Secure Access Password / PIN
-                          </label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                              <KeyRound size={14} />
-                            </span>
-                            <input
-                              id="login_pin_phone"
-                              type={showPassword ? "text" : "password"}
-                              required
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              placeholder="Enter your password or PIN"
-                              className="w-full pl-9 pr-9 py-1.5 text-sm bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 outline-none"
-                            >
-                              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    <button
-                      id="auth_submit_btn"
-                      type="submit"
-                      className="w-full mt-2 py-2 bg-gov-primary hover:bg-slate-800 text-white font-medium text-sm rounded flex items-center justify-center gap-2 transition-colors duration-150 shadow-sm cursor-pointer"
-                    >
-                      <span>Authenticate Account</span>
-                      <ArrowRight size={16} />
-                    </button>
-                  </form>
-                )}
-
-                <div className="text-center pt-2.5 border-t border-slate-100">
-                  <button
-                    id="toggle_register_btn"
-                    type="button"
-                    className="text-xs text-gov-accent font-medium hover:underline focus:outline-none flex items-center justify-center gap-1 mx-auto"
-                    onClick={() => {
-                      setIsRegistering(true);
-                      setFirstName("");
-                      setLastName("");
-                      setPhoneNumber("");
-                    }}
-                  >
-                    <UserPlus size={14} /> New Citizen? Register credentials for the first time
-                  </button>
                 </div>
-              </div>
+              </>
             )}
-          </>
+
+            <button id="auth_submit_btn" type="submit" className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition cursor-pointer shadow-sm">
+              Login <ArrowRight size={15} />
+            </button>
+            <p className="text-center text-xs text-gray-400">
+              No account?{" "}
+              <button type="button" id="toggle_register_btn" onClick={() => { setIsRegistering(true); setFirstName(""); setLastName(""); setPhoneNumber(""); }} className="text-blue-600 font-semibold hover:underline cursor-pointer">
+                Register
+              </button>
+            </p>
+          </form>
         )}
       </div>
+
+      {/* RIGHT: Branding Panel */}
+      <div className="hidden md:flex w-1/2 bg-gradient-to-br from-blue-600 to-blue-500 p-10 flex-col justify-center relative overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full" />
+        <div className="absolute -bottom-16 -left-8 w-56 h-56 bg-white/5 rounded-full" />
+
+        <div className="relative z-10 space-y-6">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <Shield size={22} className="text-white" />
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">DocuEase</span>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-bold text-white leading-snug">Understand any government document instantly</h3>
+            <p className="text-blue-100 text-sm mt-2 leading-relaxed">Simplify complex legal language into plain English, Telugu, or Hindi — with one click.</p>
+          </div>
+
+          {/* Features */}
+          <div className="space-y-3">
+            {[
+              { icon: <FileCheck size={15} />, text: "Validates government documents automatically" },
+              { icon: <Shield size={15} />, text: "Trust score system keeps portal integrity high" },
+              { icon: <Mail size={15} />, text: "Supports PDF, images, and pasted text" },
+              { icon: <KeyRound size={15} />, text: "Telugu & Hindi translation with audio narration" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-7 h-7 bg-white/15 rounded-lg flex items-center justify-center shrink-0 text-white">
+                  {item.icon}
+                </div>
+                <span className="text-sm text-blue-100">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
 
-// Chevron helper
 function ChevronRightArrow() {
   return (
-    <div className="text-slate-300 group-hover:text-gov-accent group-hover:translate-x-0.5 transition-transform">
+    <div className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-transform">
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
       </svg>

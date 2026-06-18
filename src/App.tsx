@@ -4,42 +4,33 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  FileText, 
-  HelpCircle, 
-  Info, 
-  Mail, 
-  UserPlus, 
-  FileCheck, 
-  ArrowRight, 
-  Briefcase, 
-  Download, 
-  Share2, 
-  Volume2, 
-  VolumeX, 
-  Play, 
-  Pause, 
-  Square, 
-  Trash2, 
-  Check, 
-  UploadCloud, 
-  Clipboard, 
+import {
+  FileText,
+  ArrowRight,
+  Download,
+  Share2,
+  Volume2,
+  Play,
+  Pause,
+  Square,
+  Trash2,
+  Check,
+  UploadCloud,
+  Clipboard,
   Copy,
   Printer,
-  AlertTriangle, 
-  ExternalLink,
-  BookOpen,
-  UserCheck,
-  Send,
+  AlertTriangle,
   Loader2,
   Bookmark,
-  ChevronRight,
-  Landmark,
-  X
+  X,
+  Plus,
+  Clock,
+  LogOut,
+  BookOpen,
+  FileCheck,
+  Info
 } from "lucide-react";
 
-import Header from "./components/Header";
-import WelcomeHero from "./components/WelcomeHero";
 import AuthPortal from "./components/AuthPortal";
 import { SimplifiedResult, UserProfile, GlossaryItem } from "./types";
 
@@ -87,13 +78,13 @@ export default function App() {
   const [sourceLang, setSourceLang] = useState<"en" | "te" | "hi">("en");
   const [fontSizeAdjustment, setFontSizeAdjustment] = useState<number>(0);
   const [highContrast, setHighContrast] = useState<boolean>(false);
-  
+
   // Authenticated Profile
   const [user, setUser] = useState<UserProfile | null>(() => {
     const cached = localStorage.getItem("docuease_user");
     return cached ? JSON.parse(cached) : null;
   });
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [showAuthPage, setShowAuthPage] = useState<boolean>(false);
   const [showLoginPromptForUpload, setShowLoginPromptForUpload] = useState<boolean>(false);
 
   // Input states
@@ -138,7 +129,7 @@ export default function App() {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [speakingSentenceIndex, setSpeakingSentenceIndex] = useState<number>(-1);
-  
+
   // Real-time refs to circumvent stale closures during recursive synthesis callbacks
   const playbackSpeedRef = useRef<number>(1);
   const selectedLangRef = useRef<"en" | "te" | "hi">("en");
@@ -357,7 +348,7 @@ export default function App() {
   // Submit Processing Call
   const handleSimplifyDocument = async () => {
     if (!user) {
-      setShowAuthModal(true);
+      setShowAuthPage(true);
       setErrorMsg("Secure Access Notice: Please authenticate your account (Sign In or Sign Up) before executing the document simplification and translation NLP engine.");
       return;
     }
@@ -393,7 +384,7 @@ export default function App() {
     try {
       const response = await fetch("/api/process", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "x-user-email": user?.email || ""
         },
@@ -456,7 +447,7 @@ export default function App() {
         }
       }
       setActiveTab("home"); // ensure viewport highlights workspace
-      
+
       // Refresh persistent list from server
       fetchHistoryAndProfile();
     } catch (e: any) {
@@ -474,7 +465,7 @@ export default function App() {
     try {
       const res = await fetch("/api/save", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "x-user-email": user?.email || ""
         },
@@ -501,7 +492,7 @@ export default function App() {
   // Delete result from history
   const handleDeleteItem = async (docId: string) => {
     try {
-      const res = await fetch(`/api/history/${docId}`, { 
+      const res = await fetch(`/api/history/${docId}`, {
         method: "DELETE",
         headers: {
           "x-user-email": user?.email || ""
@@ -524,7 +515,7 @@ export default function App() {
   const handleClearHistory = async () => {
     if (!window.confirm("Verify: Are you sure you want to clear your entire verification history?")) return;
     try {
-      await fetch("/api/history/clear", { 
+      await fetch("/api/history/clear", {
         method: "POST",
         headers: {
           "x-user-email": user?.email || ""
@@ -534,11 +525,11 @@ export default function App() {
       setSavedList([]);
       setCurrentResult(null);
       setPortalTrustScore(100);
-      
+
       const cachedUser = localStorage.getItem("docuease_user");
       if (cachedUser) {
         const parsedUser = JSON.parse(cachedUser);
-        const updatedUser = { ...parsedUser, trustScore: 85 };
+        const updatedUser = { ...parsedUser, trustScore: 100 };
         setUser(updatedUser);
         localStorage.setItem("docuease_user", JSON.stringify(updatedUser));
       }
@@ -674,7 +665,7 @@ export default function App() {
     const rawParts = text.split(/([.!?।\n]+)/g);
     const result: string[] = [];
     let accum = "";
-    
+
     for (let i = 0; i < rawParts.length; i++) {
       const chunk = rawParts[i];
       if (/^[.!?।\n]+$/.test(chunk)) {
@@ -696,11 +687,10 @@ export default function App() {
   // Bidirectional Jaccard / Proportional text alignment & glossary highlighter for Overlay Comparison Mode
   const getMatchedSimplifiedIndex = (origIdx: number, sentsOrig: string[], sentsSimp: string[]): number => {
     if (sentsOrig.length === 0 || sentsSimp.length === 0) return 0;
-    
+
     const origSent = sentsOrig[origIdx];
     if (!origSent) return 0;
 
-    // Compute clean lowercase words list (supports English and standard Indian unicode letters)
     const origWords = new Set(
       origSent.toLowerCase()
         .replace(/[^\w\s\u0900-\u097F\u0C00-\u0C7F]/g, "")
@@ -721,14 +711,14 @@ export default function App() {
         .replace(/[^\w\s\u0900-\u097F\u0C00-\u0C7F]/g, "")
         .split(/\s+/)
         .filter(w => w.length > 2);
-        
+
       let overlap = 0;
       for (const w of simpWords) {
         if (origWords.has(w)) {
           overlap++;
         }
       }
-      
+
       if (overlap > maxOverlap) {
         maxOverlap = overlap;
         bestIndex = i;
@@ -745,7 +735,7 @@ export default function App() {
 
   const getMatchedOriginalIndex = (simpIdx: number, sentsOrig: string[], sentsSimp: string[]): number => {
     if (sentsOrig.length === 0 || sentsSimp.length === 0) return 0;
-    
+
     const simpSent = sentsSimp[simpIdx];
     if (!simpSent) return 0;
 
@@ -769,14 +759,14 @@ export default function App() {
         .replace(/[^\w\s\u0900-\u097F\u0C00-\u0C7F]/g, "")
         .split(/\s+/)
         .filter(w => w.length > 2);
-        
+
       let overlap = 0;
       for (const w of origWords) {
         if (simpWords.has(w)) {
           overlap++;
         }
       }
-      
+
       if (overlap > maxOverlap) {
         maxOverlap = overlap;
         bestIndex = i;
@@ -794,10 +784,9 @@ export default function App() {
   const renderTextWithGlossaryHighlights = (text: string, glossary: GlossaryItem[]) => {
     if (!text || !glossary || glossary.length === 0) return text;
 
-    // Sort glossary terms longest first to avoid substring collision (e.g. matching 'tax' inside 'taxi')
     const sortedGlossary = [...glossary].sort((a, b) => b.term.length - a.term.length);
     const escapedTerms = sortedGlossary.map(g => g.term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
-    
+
     const regex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
     const parts = text.split(regex);
 
@@ -805,14 +794,14 @@ export default function App() {
       const matchedTerm = sortedGlossary.find(g => g.term.toLowerCase() === part.toLowerCase());
       if (matchedTerm) {
         return (
-          <span 
-            key={index} 
+          <span
+            key={index}
             className="font-bold text-amber-800 bg-amber-50 h-fit border-b border-dashed border-amber-500 px-1 rounded cursor-help inline-block group relative"
             title={matchedTerm.definition}
           >
             {part}
-            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1.5 hidden group-hover:block bg-slate-905 text-white text-[10px] p-2.5 rounded-lg shadow-lg max-w-xs z-50 w-52 leading-relaxed font-sans normal-case font-normal border border-slate-700">
-              <strong className="text-amber-350 block mb-0.5">{matchedTerm.term} (Glossary Definition):</strong> {matchedTerm.definition}
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1.5 hidden group-hover:block bg-slate-900 text-white text-[10px] p-2.5 rounded-lg shadow-lg max-w-xs z-50 w-52 leading-relaxed font-sans normal-case font-normal border border-slate-700">
+              <strong className="text-amber-400 block mb-0.5">{matchedTerm.term}:</strong> {matchedTerm.definition}
             </span>
           </span>
         );
@@ -821,30 +810,13 @@ export default function App() {
     });
   };
 
-  // Text copy script
-  const handleCopyText = (content: string, idPrefix: string) => {
-    navigator.clipboard.writeText(content);
-    const target = document.getElementById(idPrefix);
-    if (target) {
-      const origText = target.innerHTML;
-      target.innerHTML = "Copied ✓";
-      target.style.backgroundColor = "#2F855A";
-      target.style.color = "#FFFFFF";
-      setTimeout(() => {
-        target.innerHTML = origText;
-        target.style.backgroundColor = "";
-        target.style.color = "";
-      }, 1500);
-    }
-  };
-
   const handleCopyOverlaySideBySide = () => {
     if (!currentResult) return;
     const originalSentences = splitIntoSentences(currentResult.originalText);
-    const activeSimplifiedText = selectedLang === "te" 
-      ? currentResult.teluguTranslation 
-      : selectedLang === "hi" 
-        ? currentResult.hindiTranslation 
+    const activeSimplifiedText = selectedLang === "te"
+      ? currentResult.teluguTranslation
+      : selectedLang === "hi"
+        ? currentResult.hindiTranslation
         : currentResult.simplifiedEnglish;
     const simplifiedSentences = splitIntoSentences(activeSimplifiedText);
 
@@ -865,23 +837,19 @@ export default function App() {
 
     navigator.clipboard.writeText(output);
     setOverlayCopied(true);
-    setTimeout(() => {
-      setOverlayCopied(false);
-    }, 2000);
+    setTimeout(() => setOverlayCopied(false), 2000);
   };
 
   const handlePrintOverlay = () => {
     window.print();
   };
 
-  // Share via WhatsApp helper
   const handleWhatsAppShare = (title: string, summary: string) => {
     const formatted = `*DocuEase Official Simplification Summary*\n\n*Document:* ${title}\n\n*Summary:* ${summary}\n\n_Generated via National Digital Transparency Initiative_`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(formatted)}`;
     window.open(url, "_blank");
   };
 
-  // Standard Plain-Text export
   const handleDownloadTxt = (title: string, details: string) => {
     const blob = new Blob([`DOCUEASE SIMPLIFIED EXPORT\n=========================\nTitle: ${title}\nDate: ${new Date().toLocaleDateString()}\n\nContent:\n${details}\n\n-------------------------\nVerified of high citizen trust confidence via Indian digital NLP.`], { type: "text/plain;charset=utf-8" });
     const link = document.createElement("a");
@@ -890,15 +858,14 @@ export default function App() {
     link.click();
   };
 
-  // Auth Portal integration helpers
   const handleLoginSuccess = (profile: UserProfile) => {
     setUser(profile);
     setPortalTrustScore(profile.trustScore);
-    setShowAuthModal(false);
+    setShowAuthPage(false);
     fetchHistoryAndProfile(profile);
-    setNotification({ 
-      message: `You have successfully logged in as ${profile.displayName}!`, 
-      type: "success" 
+    setNotification({
+      message: `You have successfully logged in as ${profile.displayName}!`,
+      type: "success"
     });
   };
 
@@ -909,23 +876,12 @@ export default function App() {
     setHistoryList([]);
     setSavedList([]);
     setCurrentResult(null);
-    setNotification({ 
-      message: "You have successfully logged out.", 
-      type: "success" 
+    setNotification({
+      message: "You have successfully logged out.",
+      type: "success"
     });
   };
 
-  // Standard client contact form submission handler
-  const handleContactSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setContactSuccess(true);
-    setTimeout(() => {
-      setContactForm({ name: "", email: "", idCode: "", message: "" });
-      setContactSuccess(false);
-    }, 4000);
-  };
-
-  // Extract text based on complexity mode
   const getActiveTextForSpeech = (result: SimplifiedResult) => {
     if (complexityMode === "summary") return result.summary;
     if (selectedLang === "te") return result.teluguTranslation;
@@ -933,1325 +889,763 @@ export default function App() {
     return result.simplifiedEnglish;
   };
 
-  // Auto-trigger sample paste on hero action
-  const triggerSampleDemo = () => {
-    handleLoadSample();
-    const targetElement = document.getElementById("main-workspace-container");
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
-  // Simple accessibility font scale multiplier
-  const dynamicTextScale = {
-    fontSize: `${14 + (fontSizeAdjustment * 1.2)}px`,
-    lineHeight: `${1.6 + (fontSizeAdjustment * 0.05)}`
-  };
+  const [inputMode, setInputMode] = useState<"paste" | "upload">("upload");
 
   return (
-    <div className={`min-h-screen bg-slate-50 flex flex-col ${highContrast ? "high-contrast" : ""}`} style={dynamicTextScale}>
-      
-      {/* Sticky Portal Navigation */}
-      <Header 
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        selectedLang={selectedLang}
-        setSelectedLang={setSelectedLang}
-        fontSizeAdjustment={fontSizeAdjustment}
-        setFontSizeAdjustment={setFontSizeAdjustment}
-        highContrast={highContrast}
-        setHighContrast={setHighContrast}
-        user={user}
-        onLogout={handleLogout}
-        onOpenAuth={() => setShowAuthModal(true)}
-      />
+    <div className={`flex h-screen overflow-hidden bg-white ${highContrast ? "high-contrast" : ""}`}>
 
-      {/* Main Container Layout */}
-      <main className="flex-1" id="main-content">
-        
-        {/* Welcome Section */}
-        {activeTab === "home" && !currentResult && (
-          <WelcomeHero onPasteShortcut={triggerSampleDemo} trustScore={portalTrustScore} />
-        )}
+      {/* LEFT SIDEBAR */}
+      <aside className="w-64 bg-white border-r border-gray-100 flex flex-col shrink-0">
+        {/* Logo */}
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
+              <FileText size={14} className="text-white" />
+            </div>
+            <span className="font-bold text-gray-900">DocuEase</span>
+          </div>
+        </div>
 
-        {/* Global Modal for Secure Auth Portal */}
-        {showAuthModal && (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="relative w-full max-w-md animate-scaleUp">
-              <AuthPortal onLoginSuccess={handleLoginSuccess} onClose={() => setShowAuthModal(false)} />
+        {/* New Document Button */}
+        <div className="px-4 pt-4 pb-2">
+          <button
+            onClick={() => { setCurrentResult(null); setInputText(""); setFileDetails(null); setActiveTab("home"); setErrorMsg(""); }}
+            className="w-full flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition cursor-pointer"
+          >
+            <Plus size={16} />
+            New Document
+          </button>
+        </div>
+
+        {/* Nav Items */}
+        <nav className="px-4 py-2 space-y-0.5">
+          <button
+            onClick={() => setActiveTab("saved")}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition cursor-pointer ${activeTab === "saved" ? "bg-gray-100 text-gray-900 font-semibold" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`}
+          >
+            <Bookmark size={16} />
+            Saved
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition cursor-pointer ${activeTab === "history" ? "bg-gray-100 text-gray-900 font-semibold" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`}
+          >
+            <Clock size={16} />
+            History
+          </button>
+        </nav>
+
+        {/* Recent Section */}
+        {historyList.length > 0 && (
+          <div className="px-4 py-3 flex-1 overflow-y-auto min-h-0">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">Recent</p>
+            <div className="space-y-0.5">
+              {historyList.slice(0, 10).map(hist => (
+                <button
+                  key={hist.id}
+                  onClick={() => { setCurrentResult(hist); setInputText(hist.originalText || ""); setActiveTab("home"); }}
+                  title={hist.title || "Government Directive"}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs transition cursor-pointer truncate block ${currentResult?.id === hist.id ? "bg-gray-100 text-gray-900 font-semibold" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`}
+                >
+                  {hist.title || "Government Directive"}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Upload Blocked Security Alert Modal popup */}
-        {showLoginPromptForUpload && (
-          <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4" id="login_required_upload_modal">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden animate-scaleUp relative">
-              <button 
-                onClick={() => setShowLoginPromptForUpload(false)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-650 transition cursor-pointer"
+        <div className="flex-1 min-h-0" />
+
+        {/* User Card */}
+        <div className="p-4 border-t border-gray-100">
+          {user ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center shrink-0">
+                  {user.displayName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-900 truncate">{user.displayName}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-[10px] mb-1">
+                  <span className="text-gray-500">Trust Score</span>
+                  <span className="font-semibold text-gray-700">{portalTrustScore}/100</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${portalTrustScore > 50 ? "bg-blue-500" : portalTrustScore > 20 ? "bg-amber-500" : "bg-red-500"}`}
+                    style={{ width: `${portalTrustScore}%` }}
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition cursor-pointer"
               >
-                <X size={18} />
+                <LogOut size={13} />
+                Sign out
               </button>
-              <div className="p-6 text-center space-y-4">
-                <div className="w-12 h-12 bg-red-50 text-red-700 rounded-full flex items-center justify-center mx-auto border-2 border-dashed border-red-500/40">
-                  <UploadCloud size={24} />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-md font-extrabold font-sans text-slate-900" id="upload_popup_title">Authentication Required</h3>
-                  <p className="text-xs text-slate-500 font-sans px-2" id="upload_popup_message">
-                    You must sign in before uploading a document. Please link your secure administrative account to enable OCR verification privileges.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button
-                    id="upload_popup_close"
-                    onClick={() => setShowLoginPromptForUpload(false)}
-                    className="px-3 py-2 border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    id="upload_popup_login_btn"
-                    onClick={() => {
-                      setShowLoginPromptForUpload(false);
-                      setShowAuthModal(true);
-                    }}
-                    className="px-3 py-2 bg-gov-accent hover:bg-yellow-600 text-slate-900 font-bold text-xs rounded transition-colors shadow-sm cursor-pointer"
-                  >
-                    Sign In
-                  </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuthPage(true)}
+              className="w-full text-xs font-semibold text-blue-600 hover:text-blue-700 py-2 px-3 border border-blue-200 rounded-lg hover:bg-blue-50 transition cursor-pointer"
+            >
+              Sign In
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header Bar */}
+        <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between shrink-0">
+          <span className="font-semibold text-gray-900 text-sm">DocuEase</span>
+          {user && (
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">
+              {user.displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* Auth Page */}
+          {showAuthPage && (
+            <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
+              <AuthPortal onLoginSuccess={handleLoginSuccess} onClose={() => setShowAuthPage(false)} />
+            </div>
+          )}
+
+          {/* Login Required Modal */}
+          {showLoginPromptForUpload && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" id="login_required_upload_modal">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-2xl max-w-sm w-full overflow-hidden relative">
+                <button onClick={() => setShowLoginPromptForUpload(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition cursor-pointer">
+                  <X size={18} />
+                </button>
+                <div className="p-6 text-center space-y-4">
+                  <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-2 border-dashed border-red-200">
+                    <UploadCloud size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900" id="upload_popup_title">Authentication Required</h3>
+                    <p className="text-xs text-gray-500 mt-1" id="upload_popup_message">You must sign in before uploading a document.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button id="upload_popup_close" onClick={() => setShowLoginPromptForUpload(false)} className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer">Cancel</button>
+                    <button id="upload_popup_login_btn" onClick={() => { setShowLoginPromptForUpload(false); setShowAuthPage(true); }} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition cursor-pointer">Sign In</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-
-        {/* Dynamic Workspace based on current Selected Navigation Link */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          
-          {/* TAB 1: HOME WORKSPACE LAYOUT (BENTO GRID STYLE) */}
+          {/* HOME TAB */}
           {activeTab === "home" && (
-            <div className="space-y-6" id="main-workspace-container">
-              
-              {/* If processing error occurs */}
-              {errorMsg && (
-                <div className="p-4 bg-red-50 border-l-4 border-l-red-700 rounded text-sm text-red-800 flex items-start gap-3" role="alert" id="error_alert">
-                  <AlertTriangle className="text-red-700 shrink-0 mt-0.5" size={20} />
-                  <div>
-                    <h4 className="font-bold font-sans">Verification Processing Blocked</h4>
-                    <p className="text-xs mt-1 text-red-900">{errorMsg}</p>
-                    <button 
-                      onClick={handleSimplifyDocument} 
-                      className="mt-2.5 px-3 py-1 bg-red-800 text-white rounded text-xs font-semibold hover:bg-slate-900 transition-all cursor-pointer"
-                    >
-                      Re-verify Gateway Request
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div id="main-workspace-container">
 
-              {/* Loader with animated skeleton state */}
+              {/* PROCESSING STATE */}
               {isProcessing && (
-                <div className="clay-card rounded-xl p-8 bg-white border-t-4 border-t-gov-accent animate-pulse text-center space-y-4" id="nlp_processing_loader">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-gov-accent border-2 border-dashed border-gov-accent">
-                    <Loader2 className="animate-spin text-[#B7791F]" size={36} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold font-sans text-slate-800">GovNLP Intelligence Simplifier Active</h3>
-                    <p className="text-xs text-gov-accent font-semibold uppercase tracking-widest mt-1">Status: {progressStep}</p>
-                    <p className="text-xs text-slate-500 max-w-sm mx-auto mt-2">
-                       This operation applies localized contextual mapping and structural grammar de-layering compliant with State notification rules.
-                    </p>
-                  </div>
-                  <div className="space-y-2 max-w-md mx-auto pt-4">
-                    <div className="h-3 bg-slate-100 rounded-full w-full"></div>
-                    <div className="h-3 bg-slate-100 rounded-full w-5/6 mx-auto"></div>
-                    <div className="h-3 bg-slate-100 rounded-full w-2/3 mx-auto"></div>
+                <div className="max-w-2xl mx-auto px-6 py-16 text-center">
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-10 space-y-4">
+                    <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
+                      <Loader2 className="animate-spin text-blue-600" size={28} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">Processing your document...</h3>
+                      <p className="text-sm text-blue-600 font-medium mt-1">{progressStep}</p>
+                    </div>
+                    <div className="space-y-2 max-w-sm mx-auto pt-2">
+                      <div className="h-2 bg-gray-100 rounded-full w-full animate-pulse" />
+                      <div className="h-2 bg-gray-100 rounded-full w-4/5 mx-auto animate-pulse" />
+                      <div className="h-2 bg-gray-100 rounded-full w-3/5 mx-auto animate-pulse" />
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Bento Grid Container */}
-              {!isProcessing && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                  
-                  {/* Left Column Stack (Span 4) */}
-                  <div className="lg:col-span-5 flex flex-col gap-6">
-                    
-                    {/* Bento Block 1: Trust Score Meter & Institutional SLA */}
-                    <div className="clay-card rounded-xl bg-slate-900 text-white p-5 flex flex-col justify-between overflow-hidden relative shadow-lg">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-[radial-gradient(circle,rgba(183,121,31,0.12),transparent_70%)]"></div>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-[10px] text-[#B7791F] font-extrabold uppercase tracking-widest">Trust Score</p>
-                          <p className="text-[11px] text-slate-400 mt-1 font-sans leading-tight">
-                            A dynamic credibility rating reflecting the verified authenticity level of public directives and Welfare documents uploaded to the portal.
-                          </p>
-                        </div>
-                        <div className="px-2.5 py-0.5 bg-green-900/50 text-green-400 rounded-full text-[10px] uppercase font-extrabold border border-green-800 shrink-0 ml-2">
-                          Secure API
-                        </div>
-                      </div>
-                      
-                      <div className="my-5 flex items-end gap-3">
-                        <span className="text-5xl font-mono font-extrabold text-[#B7791F] tracking-tight leading-none m-0">
-                          {portalTrustScore}%
-                        </span>
-                        <div className="pb-1">
-                          <p className="text-[10px] text-slate-300 font-bold uppercase">Integrity Index</p>
-                          <div className="h-2 w-32 bg-slate-800 rounded-full mt-1.5 overflow-hidden border border-slate-700">
-                            <div className="h-full bg-gov-accent rounded-full transition-all duration-500" style={{ width: `${portalTrustScore}%` }}></div>
-                          </div>
-                        </div>
-                      </div>
+              {/* HERO + UPLOAD (no result yet) */}
+              {!isProcessing && !currentResult && (
+                <div className="max-w-2xl mx-auto px-6 py-10">
 
-                      <div className="text-[11px] text-slate-300 border-t border-slate-800 pt-3 flex items-center justify-between">
-                        <span>SLA Compliance Code: <b>M-124-RT</b></span>
-                        <span className="text-[#B7791F] font-bold">Standard Verified</span>
+                  {/* Error */}
+                  {errorMsg && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3" id="error_alert">
+                      <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
+                      <div>
+                        <p className="text-sm font-semibold text-red-800">Processing Failed</p>
+                        <p className="text-xs text-red-600 mt-0.5">{errorMsg}</p>
                       </div>
                     </div>
+                  )}
 
-                    {/* Bento Block 2: Document Scanning and Upload Mechanism */}
-                    <div className="clay-card rounded-xl bg-white p-5 border border-slate-200 shadow-sm flex flex-col">
-                      <div className="flex justify-between items-center mb-3.5">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-gov-accent"></span>
-                          Input Document Panel
-                        </h3>
-                        {fileDetails && (
-                          <button 
-                            onClick={() => { setFileDetails(null); setInputText(""); }}
-                            className="text-xs font-bold text-red-700 hover:underline cursor-pointer"
-                          >
-                            Clear File
-                          </button>
-                        )}
-                      </div>
+                  {/* Hero Text */}
+                  <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-3">Understand any government document</h1>
+                    <p className="text-gray-500 text-sm">Upload or paste your document and get a simplified, translated version instantly.</p>
+                  </div>
 
-                      {/* Drag & Drop Frame */}
-                      <input
-                        ref={fileInputRef}
-                        id="file-selector"
-                        type="file"
-                        accept="*"
-                        onChange={handleFileReader}
-                        className="hidden"
-                      />
-                      <div
-                        id="document_drag_frame"
-                        onDragEnter={handleDrag}
-                        onDragLeave={handleDrag}
-                        onDragOver={handleDrag}
-                        onDrop={handleFileDrop}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (!user) {
-                            setShowLoginPromptForUpload(true);
-                          } else {
-                            fileInputRef.current?.click();
-                          }
-                        }}
-                        className={`border-2 border-dashed rounded-lg p-5 text-center transition duration-150 cursor-pointer flex flex-col items-center justify-center min-h-[140px] ${
-                          dragActive ? "border-gov-accent bg-slate-50" : "border-slate-300 hover:border-gov-accent bg-slate-50/50"
-                        }`}
+                  {/* Upload Panel */}
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+                    {/* Mode Tabs */}
+                    <div className="flex border-b border-gray-100">
+                      <button
+                        onClick={() => setInputMode("paste")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition cursor-pointer ${inputMode === "paste" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
                       >
-                        <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-slate-200 flex items-center justify-center mb-2.5">
-                          <UploadCloud size={20} className="text-slate-500" />
-                        </div>
-                        <p className="text-xs font-bold text-slate-800">
-                          {fileDetails ? `Detected: ${fileDetails.name}` : "Upload PDF / TXT / Image file"}
-                        </p>
-                        <p className="text-[10px] text-slate-500 mt-1">
-                          {fileDetails ? `Payload weight: ${fileDetails.size}` : "Drag & drop or Click to browse"}
-                        </p>
-                      </div>
+                        <Clipboard size={15} />
+                        Paste text
+                      </button>
+                      <button
+                        onClick={() => setInputMode("upload")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition cursor-pointer ${inputMode === "upload" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+                      >
+                        <UploadCloud size={15} />
+                        Upload file
+                      </button>
+                    </div>
 
-                      {/* Manual Paste Text-area and statistics */}
-                      <div className="mt-4 flex-1 flex flex-col">
-                        <label htmlFor="pasted_text_input" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
-                          Or Paste Regulatory Gazette / Welfare Order
-                        </label>
-                        <div className="relative flex-1">
+                    {/* Source Language Pills */}
+                    <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-gray-400 font-medium">Source language:</span>
+                      {([{code: "en", label: "English"}, {code: "hi", label: "Hindi"}, {code: "te", label: "Telugu"}] as {code: "en"|"te"|"hi", label: string}[]).map(l => (
+                        <button
+                          key={l.code}
+                          onClick={() => setSourceLang(l.code)}
+                          className={`px-3 py-1 text-xs rounded-full border transition cursor-pointer ${sourceLang === l.code ? "bg-blue-50 border-blue-300 text-blue-700 font-semibold" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                        >
+                          {l.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Input Area */}
+                    <div className="p-5">
+                      <input ref={fileInputRef} id="file-selector" type="file" accept="*" onChange={handleFileReader} className="hidden" />
+
+                      {inputMode === "upload" ? (
+                        <div
+                          id="document_drag_frame"
+                          onDragEnter={handleDrag}
+                          onDragLeave={handleDrag}
+                          onDragOver={handleDrag}
+                          onDrop={handleFileDrop}
+                          onClick={() => { if (!user) { setShowLoginPromptForUpload(true); } else { fileInputRef.current?.click(); } }}
+                          className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 ${dragActive ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-gray-300 bg-gray-50"}`}
+                        >
+                          <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-gray-200 flex items-center justify-center">
+                            <UploadCloud size={22} className="text-gray-400" />
+                          </div>
+                          {fileDetails ? (
+                            <>
+                              <p className="text-sm font-semibold text-gray-800">{fileDetails.name}</p>
+                              <p className="text-xs text-gray-400">{fileDetails.size}</p>
+                              <button onClick={(e) => { e.stopPropagation(); setFileDetails(null); setInputText(""); }} className="text-xs text-red-500 hover:text-red-700 font-medium">Remove file</button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm font-medium text-gray-700">Drop your file here, or <span className="text-blue-600">browse</span></p>
+                              <p className="text-xs text-gray-400">PDF, TXT, JPG, PNG supported · Max 4MB</p>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="relative">
                           <textarea
                             id="pasted_text_input"
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
-                            placeholder="e.g., G.O.Ms.No. 143... Subject: Guideline for execution of National Solatium..."
-                            className="w-full min-h-[140px] max-h-[300px] p-3 text-xs bg-slate-50 border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none font-mono"
-                          ></textarea>
-                          <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-white/95 border border-slate-200 px-1.5 py-0.5 rounded shadow-sm text-[9px] text-slate-500">
-                            <Clipboard size={10} />
-                            <span>{inputText.length} Characters</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Notice Disclaimer Statement */}
-                      <div className="bg-amber-50 border border-amber-200 rounded p-2.5 text-[10px] text-amber-800 mt-3.5 space-y-1">
-                        <p className="font-semibold flex items-center gap-1 leading-none m-0">
-                          <AlertTriangle size={12} className="text-gov-accent animate-pulse shrink-0" />
-                          Official Policy Notice
-                        </p>
-                        <p className="m-0 leading-tight">
-                          Only verified state, circular, and public-utility notifications should be submitted. Spam records degrade personal Trust Credit confidence indexes.
-                        </p>
-                      </div>
-
-                      {/* Language Configuration Module */}
-                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3" id="language_config_panel">
-                        {/* Source Document Language Dropdown */}
-                        <div className="p-3 bg-slate-100 border border-slate-200 rounded-lg flex flex-col justify-between" id="source_lang_selection_container">
-                          <div>
-                            <label htmlFor="source_lang_select" className="text-[10px] font-extrabold text-slate-750 uppercase tracking-wider block mb-1.5">
-                              Source Language
-                            </label>
-                            <select
-                              id="source_lang_select"
-                              value={sourceLang}
-                              onChange={(e) => setSourceLang(e.target.value as any)}
-                              className="w-full py-1.5 px-2 text-xs bg-white border border-slate-300 rounded font-semibold text-slate-700 focus:ring-1 focus:ring-gov-accent focus:border-gov-accent outline-none cursor-pointer"
-                            >
-                              <option value="en">English (default)</option>
-                              <option value="te">తెలుగు (Telugu)</option>
-                              <option value="hi">हिन्दी (Hindi)</option>
-                            </select>
-                          </div>
-                          <p className="text-[9px] text-slate-500 mt-2 leading-tight">Explicitly specifies the original input file or text language before parsing.</p>
-                        </div>
-
-                        {/* Targeted Translation Selector Segment */}
-                        <div className="p-3 bg-slate-100 border border-slate-200 rounded-lg flex flex-col justify-between" id="target_lang_pre_selection">
-                          <div>
-                            <div className="flex justify-between items-center mb-1.5">
-                              <label className="text-[10px] font-extrabold text-slate-750 uppercase tracking-wider block">
-                                Target Language
-                              </label>
-                              <span className="text-[8.5px] text-gov-accent font-bold px-1 bg-amber-50 rounded border border-amber-200">
-                                {selectedLang === "en" ? "EN" : selectedLang === "te" ? "TE" : "HI"}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-1">
-                              {[
-                                { code: "en", label: "EN" },
-                                { code: "te", label: "తేలుగు" },
-                                { code: "hi", label: "हिन्दी" }
-                              ].map((item) => (
-                                <button
-                                  key={item.code}
-                                  type="button"
-                                  onClick={() => setSelectedLang(item.code as any)}
-                                  className={`py-1.5 text-[10px] font-bold rounded border transition duration-150 flex items-center justify-center cursor-pointer ${
-                                    selectedLang === item.code
-                                      ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                                      : "bg-white text-slate-750 border-slate-300 hover:bg-slate-50 hover:border-slate-400"
-                                  }`}
-                                >
-                                  <span>{item.label}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <p className="text-[9px] text-slate-500 mt-2 leading-tight">Translate plain-language outcome to chosen regional language.</p>
-                        </div>
-                      </div>
-
-                      {/* Action Submission */}
-                      <button
-                        id="process-simplifier-btn"
-                        onClick={handleSimplifyDocument}
-                        disabled={isLocked || portalTrustScore === 0}
-                        className={`mt-4 w-full py-3 text-white font-extrabold text-xs tracking-wider uppercase rounded-lg shadow flex items-center justify-center gap-1.5 transition duration-150 ${(isLocked || portalTrustScore === 0) ? "bg-red-700 cursor-not-allowed opacity-70" : "bg-gov-primary hover:bg-slate-800 cursor-pointer hover:shadow-md"}`}
-                      >
-                        {portalTrustScore === 0 ? "Access Revoked — Trust Score at 0" : isLocked ? "Upload Blocked — Invalid Document" : "Execute NLP Simplify"}
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-
-                    {/* Bento Block 3: AI Classifier Indicators (When result is selected) */}
-                    {currentResult && (
-                      <div className="clay-card rounded-xl bg-white p-5 border border-slate-200 shadow-sm space-y-3">
-                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-none m-0">AI Classification</p>
-                        <div className="flex items-start gap-3">
-                          <div className="p-2.5 bg-gov-accent/15 text-gov-accent rounded">
-                            <FileCheck size={24} />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-sans font-extrabold leading-tight text-slate-900 m-0">
-                              {currentResult.documentType || "Official Circular"}
-                            </h4>
-                            <p className="text-[10px] text-slate-500 mt-0.5">Verified Government Document Format</p>
-                          </div>
-                        </div>
-                        <div className="text-[11px] p-2 bg-green-50 border border-green-200 text-green-800 rounded font-bold uppercase tracking-wider flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-green-600 rounded-full animate-ping"></span>
-                          Government Relevance: <b>Validated ({currentResult.isGovernmentRelated ? "TRUE" : "FALSE"})</b>
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-
-                  {/* Right Column Stack (Span 7) - Primary Output Panel */}
-                  <div className="lg:col-span-7 flex flex-col gap-6">
-                    
-                    {/* Main Simplification Output Module */}
-                    <div className="clay-card rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col overflow-hidden h-full">
-                      
-                      {/* Top Header Controls with Tabs */}
-                      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 sm:flex justify-between items-center gap-4">
-                        <div className="flex items-center gap-1 mb-2.5 sm:mb-0">
-                          <button
-                            id="tab_complexity_summary"
-                            onClick={() => setComplexityMode("summary")}
-                            className={`px-3 py-1.5 text-xs font-bold rounded transition cursor-pointer ${
-                              complexityMode === "summary" ? "bg-gov-primary text-white" : "hover:bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            Executive Summary
-                          </button>
-                          <button
-                            id="tab_complexity_plain"
-                            onClick={() => setComplexityMode("plain")}
-                            className={`px-3 py-1.5 text-xs font-bold rounded transition cursor-pointer ${
-                              complexityMode === "plain" ? "bg-gov-primary text-white" : "hover:bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            Plain Language View
-                          </button>
-                          <button
-                            id="tab_complexity_overlay"
-                            onClick={() => setComplexityMode("overlay")}
-                            className={`px-3 py-1.5 text-xs font-bold rounded transition cursor-pointer ${
-                              complexityMode === "overlay" ? "bg-gov-primary text-white" : "hover:bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            Overlay Comparison
-                          </button>
-                          <button
-                            id="tab_complexity_literal"
-                            onClick={() => setComplexityMode("literal")}
-                            className={`px-3 py-1.5 text-xs font-bold rounded transition cursor-pointer ${
-                              complexityMode === "literal" ? "bg-gov-primary text-white" : "hover:bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            Original Document
-                          </button>
-                        </div>
-                        {currentResult && (
-                          <div className="flex items-center gap-1.5">
-                            {/* Audio Playback Controls (Only enabled for English text blocks) */}
-                            {!(complexityMode === "plain" && (selectedLang === "te" || selectedLang === "hi")) && (
-                              <div className="flex items-center border border-slate-300 rounded bg-white p-0.5" id="speech_audio_controls">
-                                {isSpeaking ? (
-                                  <button
-                                    id="playback_stop_btn"
-                                    onClick={handleCancelSpeech}
-                                    className="p-1 text-red-700 hover:bg-slate-100 rounded cursor-pointer"
-                                    title="Stop Narration"
-                                  >
-                                    <Square size={14} fill="currentColor" />
-                                  </button>
-                                ) : null}
-
-                                {isSpeaking ? (
-                                  isPaused ? (
-                                    <button
-                                      id="playback_resume_btn"
-                                      onClick={handleResumeSpeech}
-                                      className="p-1 text-green-700 hover:bg-slate-100 rounded cursor-pointer"
-                                      title="Resume"
-                                    >
-                                      <Play size={14} fill="currentColor" />
-                                    </button>
-                                  ) : (
-                                    <button
-                                      id="playback_pause_btn"
-                                      onClick={handlePauseSpeech}
-                                      className="p-1 text-slate-700 hover:bg-slate-100 rounded cursor-pointer"
-                                      title="Pause"
-                                    >
-                                      <Pause size={14} fill="currentColor" />
-                                    </button>
-                                  )
-                                ) : (
-                                  <button
-                                    id="playback_play_btn"
-                                    onClick={() => handleSpeak(getActiveTextForSpeech(currentResult))}
-                                    className="p-1 text-gov-accent hover:bg-slate-100 rounded cursor-pointer flex items-center gap-1"
-                                    title="Listen text Aloud"
-                                  >
-                                    <Volume2 size={14} />
-                                    <span className="text-[10px] font-bold">Listen</span>
-                                  </button>
-                                )}
-
-                                {/* Playback rate selector */}
-                                <select
-                                  id="playback_speed_selector"
-                                  value={playbackSpeed}
-                                  onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
-                                  className="text-[9px] font-bold border-l border-slate-200 outline-none pl-1 text-slate-700 ml-1 bg-white cursor-pointer"
-                                  title="Speech Speed"
-                                >
-                                  <option value="0.5">0.5x</option>
-                                  <option value="1">1.0x</option>
-                                  <option value="1.25">1.25x</option>
-                                  <option value="1.5">1.5x</option>
-                                  <option value="2">2.0x</option>
-                                </select>
-                              </div>
-                            )}
-
-                            {/* Save / Bookmarked state */}
-                            <button
-                              id="btn_bookmark_result"
-                              onClick={() => handleToggleSave(currentResult.id, savedList.some(s => s.id === currentResult.id))}
-                              className={`p-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded shrink-0 cursor-pointer ${
-                                savedList.some(s => s.id === currentResult.id) ? "text-gov-accent shrink-0" : "text-slate-500 hover:text-slate-700"
-                              }`}
-                              title="Bookmark Result"
-                            >
-                              <Bookmark size={14} fill={savedList.some(s => s.id === currentResult.id) ? "currentColor" : "none"} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Output workspace contents */}
-                      {!currentResult ? (
-                        <div className="flex-1 p-8 text-center flex flex-col justify-center items-center text-slate-400 select-none min-h-[300px]">
-                          <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 border border-slate-200 mb-3 animate-pulse">
-                            <BookOpen size={24} />
-                          </div>
-                          <h4 className="text-sm font-bold font-sans text-slate-500 m-0">No Output Compiled</h4>
-                          <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 leading-normal">
-                             Submit original regulatory circular or Welfare rules utilizing our left panel to trigger high-quality bilingual simplifications in real time.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="flex-1 p-5 space-y-6">
-                          
-                          {/* Main Title Heading */}
-                          <div>
-                            <span className="text-[10px] bg-slate-100 border border-slate-200 text-slate-600 font-extrabold px-2 py-0.5 rounded font-mono uppercase">
-                              Verified Docket
-                            </span>
-                            <h2 className="text-lg font-extrabold text-slate-900 mt-1 font-sans mb-0">
-                              {currentResult.title || "Regulatory Information circular"}
-                            </h2>
-                            <p className="text-[10px] text-slate-500 leading-none mt-1">Processed: {new Date(currentResult.timestamp).toLocaleString()}</p>
-                          </div>
-
-                          {/* Dynamic Complexity view switcher */}
-                          {complexityMode === "literal" ? (
-                            <div className="p-4 bg-slate-50 border border-slate-200 rounded font-mono text-xs whitespace-pre-wrap leading-relaxed select-text" id="original_pasted_holder">
-                              {currentResult.originalText}
-                            </div>
-                          ) : complexityMode === "summary" ? (
-                            <div className="space-y-3" id="executive_summary_holder">
-                              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-none m-0">Executive NLP Summary</h4>
-                              <p className="text-sm border-l-4 border-l-[#B7791F] pl-3.5 italic leading-relaxed text-slate-800 m-0 select-text">
-                                {currentResult.summary}
-                              </p>
-                            </div>
-                          ) : complexityMode === "overlay" ? (
-                            (() => {
-                              const originalSentences = currentResult ? splitIntoSentences(currentResult.originalText) : [];
-                              const activeSimplifiedText = currentResult 
-                                ? (selectedLang === "te" 
-                                    ? currentResult.teluguTranslation 
-                                    : selectedLang === "hi" 
-                                      ? currentResult.hindiTranslation 
-                                      : currentResult.simplifiedEnglish)
-                                : "";
-                              const simplifiedSentences = currentResult ? splitIntoSentences(activeSimplifiedText) : [];
-                              const activeOriginalSentence = originalSentences[hoveredOrigIdx] || "";
-                              const matchedSimpIndex = getMatchedSimplifiedIndex(hoveredOrigIdx, originalSentences, simplifiedSentences);
-                              const activeSimplifiedSentence = simplifiedSentences[matchedSimpIndex] || "";
-
-                              return (
-                                <div className="space-y-5" id="overlay_comparison_holder">
-                                  {/* Controls Header Bar */}
-                                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 border border-slate-200 p-3 rounded-lg gap-3" id="overlay_comparison_header_bar">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                                      <span className="text-xs font-bold text-slate-700">Overlay Comparison Utilities</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                                      {/* Copy All Button */}
-                                      <button
-                                        id="overlay_copy_all_btn"
-                                        onClick={handleCopyOverlaySideBySide}
-                                        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 border hover:bg-slate-50 rounded text-xs font-semibold transition cursor-pointer grow sm:grow-0 ${
-                                          overlayCopied 
-                                            ? "bg-green-50 border-green-300 text-green-700" 
-                                            : "bg-white border-slate-300 text-slate-700 hover:border-slate-400"
-                                        }`}
-                                        title="Copy both original and simplified side-by-side"
-                                      >
-                                        {overlayCopied ? <Check size={13} /> : <Copy size={13} className="text-slate-500" />}
-                                        {overlayCopied ? "Copied Side-by-Side!" : "Copy Side-by-Side"}
-                                      </button>
-                                      {/* Print Button */}
-                                      <button
-                                        id="overlay_print_btn"
-                                        onClick={handlePrintOverlay}
-                                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 rounded text-xs font-semibold text-slate-700 transition cursor-pointer grow sm:grow-0"
-                                        title="Print clean side-by-side comparison"
-                                      >
-                                        <Printer size={13} className="text-slate-500" />
-                                        Print Side-by-Side
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Introduction Explainer Banner */}
-                                  <div className="p-3.5 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-xs leading-relaxed flex items-start gap-2.5">
-                                    <Info size={16} className="shrink-0 text-blue-600 mt-0.5" />
-                                    <div>
-                                      <strong className="font-bold">Interactive Overlay Comparison Mode:</strong> Hover or click on any clause in the left panel to highlight its matching simplified translation on the right. Key legal terms are highlighted with interactive tooltips defining official Indian legal terminology.
-                                    </div>
-                                  </div>
-
-                                  {/* Split Panels */}
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5" id="overlay_split_view">
-                                    {/* Left Panel: Original Legalese */}
-                                    <div className="border border-red-100 rounded-lg bg-orange-50/5 overflow-hidden flex flex-col h-[400px]">
-                                      <div className="bg-red-50/50 px-3.5 py-2.5 border-b border-red-150 flex items-center justify-between">
-                                        <span className="text-[10px] font-extrabold text-red-800 uppercase tracking-wider font-mono">
-                                          Original Legalese Version
-                                        </span>
-                                        <span className="text-[9px] bg-red-100/70 text-red-850 px-1.5 py-0.5 rounded font-mono font-bold">
-                                          {originalSentences.length} Clauses
-                                        </span>
-                                      </div>
-                                      <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1 bg-white custom-scrollbar">
-                                        {originalSentences.length === 0 ? (
-                                          <p className="text-xs text-slate-400 italic">No complex sentences detected.</p>
-                                        ) : (
-                                          originalSentences.map((sent, idx) => {
-                                            const isSelected = hoveredOrigIdx === idx;
-                                            return (
-                                              <div
-                                                key={idx}
-                                                id={`overlay_orig_sent_${idx}`}
-                                                onClick={() => setHoveredOrigIdx(idx)}
-                                                onMouseEnter={() => setHoveredOrigIdx(idx)}
-                                                className={`p-2.5 rounded-lg border transition-all duration-150 cursor-pointer text-xs leading-relaxed ${
-                                                  isSelected
-                                                    ? "bg-red-50 border-red-300 text-red-950 font-medium shadow-xs ring-2 ring-red-400/10"
-                                                    : "border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-800 opacity-65 hover:opacity-100"
-                                                }`}
-                                              >
-                                                <div className="flex items-start gap-2">
-                                                  <span className={`text-[8px] font-bold px-1 py-0.2 rounded-sm mt-0.5 shrink-0 select-none ${
-                                                    isSelected ? "bg-red-200 text-red-800" : "bg-slate-200 text-slate-600"
-                                                  }`}>
-                                                    {idx + 1}
-                                                  </span>
-                                                  <div className="grow select-text">
-                                                    {renderTextWithGlossaryHighlights(sent, currentResult.glossary || [])}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            );
-                                          })
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {/* Right Panel: Simplified Clean Text */}
-                                    <div className="border border-green-100 rounded-lg bg-green-50/5 overflow-hidden flex flex-col h-[400px]">
-                                      <div className="bg-green-50/50 px-3.5 py-2.5 border-b border-green-150 flex items-center justify-between">
-                                        <span className="text-[10px] font-extrabold text-green-800 uppercase tracking-wider font-mono">
-                                          Citizen-Friendly Translation
-                                        </span>
-                                        <span className="text-[9px] bg-green-100/70 text-green-850 px-1.5 py-0.5 rounded font-mono font-bold">
-                                          {selectedLang === "te" ? "Telugu | తెలుగు" : selectedLang === "hi" ? "Hindi | हिन्दी" : "Simplified English"}
-                                        </span>
-                                      </div>
-                                      <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1 bg-white custom-scrollbar">
-                                        {simplifiedSentences.length === 0 ? (
-                                          <p className="text-xs text-slate-400 italic">No simplified compilation found.</p>
-                                        ) : (
-                                          simplifiedSentences.map((sent, idx) => {
-                                            const isSelected = matchedSimpIndex === idx;
-                                            return (
-                                              <div
-                                                key={idx}
-                                                id={`overlay_simp_sent_${idx}`}
-                                                onClick={() => {
-                                                  const revOrigIdx = getMatchedOriginalIndex(idx, originalSentences, simplifiedSentences);
-                                                  setHoveredOrigIdx(revOrigIdx);
-                                                }}
-                                                onMouseEnter={() => {
-                                                  const revOrigIdx = getMatchedOriginalIndex(idx, originalSentences, simplifiedSentences);
-                                                  setHoveredOrigIdx(revOrigIdx);
-                                                }}
-                                                className={`p-2.5 rounded-lg border transition-all duration-150 cursor-pointer text-xs leading-relaxed ${
-                                                  isSelected
-                                                    ? "bg-green-50 border-green-300 text-green-950 font-medium shadow-xs ring-2 ring-green-400/10"
-                                                    : "border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-800 opacity-65 hover:opacity-100"
-                                                }`}
-                                              >
-                                                <div className="flex items-start gap-2">
-                                                  <span className={`text-[8px] font-bold px-1 py-0.2 rounded-sm mt-0.5 shrink-0 select-none ${
-                                                    isSelected ? "bg-green-200 text-green-800" : "bg-slate-200 text-slate-600"
-                                                  }`}>
-                                                    {idx + 1}
-                                                  </span>
-                                                  <div className="grow select-text">
-                                                    {sent}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            );
-                                          })
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Comparison Insights Bento Box */}
-                                  {activeOriginalSentence && (
-                                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3.5 shadow-sm" id="overlay_insights_panel">
-                                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
-                                        <h5 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 leading-none m-0">
-                                          <FileCheck size={14} className="text-gov-accent" />
-                                          Section Translation Insights
-                                        </h5>
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-[10px] font-bold text-red-805 bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-full">
-                                            Legalese Clause #{hoveredOrigIdx + 1}
-                                          </span>
-                                          <ArrowRight size={12} className="text-slate-400" />
-                                          <span className="text-[10px] font-bold text-green-805 bg-green-50 border border-green-100 px-2.5 py-0.5 rounded-full">
-                                            Plain Alternative #{matchedSimpIndex + 1}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        {/* Stat metrics */}
-                                        <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col justify-center items-center text-center shadow-2xs">
-                                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Clause Length Reduction</span>
-                                          <div className="flex items-baseline gap-1 mt-1 font-sans">
-                                            {(() => {
-                                              const origLen = activeOriginalSentence.split(/\s+/).filter(Boolean).length;
-                                              const simpLen = activeSimplifiedSentence ? activeSimplifiedSentence.split(/\s+/).filter(Boolean).length : 0;
-                                              const pct = origLen > 0 ? Math.max(0, Math.round(((origLen - simpLen) / origLen) * 100)) : 0;
-                                              return (
-                                                <>
-                                                  <span className="text-xl font-black text-slate-800">
-                                                    {pct}%
-                                                  </span>
-                                                  <span className="text-[9px] text-green-600 font-bold font-mono">Shorter</span>
-                                                </>
-                                              );
-                                            })()}
-                                          </div>
-                                          <p className="text-[9px] text-slate-500 mt-1 leading-none">
-                                            {activeOriginalSentence.split(/\s+/).filter(Boolean).length} words ➔ {activeSimplifiedSentence ? activeSimplifiedSentence.split(/\s+/).filter(Boolean).length : 0} words
-                                          </p>
-                                        </div>
-
-                                        {/* Visual Bar Comparison */}
-                                        <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col justify-center shadow-2xs">
-                                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center mb-1 bg-slate-50 py-0.5 rounded">Structure Complexity</span>
-                                          <div className="space-y-2 mt-1">
-                                            {(() => {
-                                              const origLen = activeOriginalSentence.split(/\s+/).filter(Boolean).length;
-                                              const simpLen = activeSimplifiedSentence ? activeSimplifiedSentence.split(/\s+/).filter(Boolean).length : 0;
-                                              const ratio = origLen > 0 ? Math.min(100, Math.round((simpLen / origLen) * 100)) : 25;
-                                              return (
-                                                <>
-                                                  <div>
-                                                    <div className="flex justify-between text-[8px] font-bold text-slate-500 mb-0.5">
-                                                      <span>Original Legalese</span>
-                                                      <span className="text-red-700">Complex (100%)</span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                                      <div className="bg-red-500 h-full rounded-full" style={{ width: "100%" }}></div>
-                                                    </div>
-                                                  </div>
-                                                  <div>
-                                                    <div className="flex justify-between text-[8px] font-bold text-slate-500 mb-0.5">
-                                                      <span>Citizen Version</span>
-                                                      <span className="text-green-700">Clear ({ratio}%)</span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-105 h-1.5 rounded-full overflow-hidden">
-                                                      <div className="bg-green-500 h-full rounded-full" style={{ width: `${ratio}%` }}></div>
-                                                    </div>
-                                                  </div>
-                                                </>
-                                              );
-                                            })()}
-                                          </div>
-                                        </div>
-
-                                        {/* Term Decryption Badge board */}
-                                        <div className="bg-white p-3.5 rounded-lg border border-slate-200 flex flex-col justify-between shadow-2xs">
-                                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jargon Unlocked</span>
-                                          <div className="flex flex-wrap gap-1 mt-1.5 grow max-h-[55px] overflow-y-auto custom-scrollbar">
-                                            {(() => {
-                                              const termsFound = (currentResult.glossary || []).filter(item => {
-                                                if (!item.term) return false;
-                                                const escaped = item.term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                                                const regex = new RegExp(escaped, 'i');
-                                                return regex.test(activeOriginalSentence);
-                                              });
-
-                                              if (termsFound.length === 0) {
-                                                return (
-                                                  <p className="text-[9px] text-slate-400 italic">No formal vocabulary terms matched in this single clause.</p>
-                                                );
-                                              }
-
-                                              return termsFound.map((item, keyIdx) => (
-                                                <span
-                                                  key={keyIdx}
-                                                  className="text-[9px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded cursor-help"
-                                                  title={`${item.term}: ${item.definition}`}
-                                                >
-                                                  {item.term}
-                                                </span>
-                                              ));
-                                            })()}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()
-                          ) : (
-                            /* Bilingual Simplification Cards in grid stack */
-                            <div className={`grid grid-cols-1 ${selectedLang === "en" ? "" : "md:grid-cols-2"} gap-6`} id="bilingual_output_grid">
-                              {/* Left Card: Always Simplified English */}
-                              <div className={`flex flex-col justify-between ${selectedLang !== "en" ? "border-b border-b-slate-100 pb-4 md:border-b-0 md:pb-0 md:border-r md:border-dashed md:border-slate-200 md:pr-4" : ""}`}>
-                                <div className="space-y-4">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-white bg-[#4A5568] px-1.5 py-0.5 rounded uppercase font-sans">
-                                      Simplified English
-                                    </span>
-                                  </div>
-
-                                  <div className="text-sm leading-relaxed text-slate-850 font-sans m-0" id="english_simplified_text">
-                                    {splitIntoSentences(currentResult.simplifiedEnglish).map((sent, sIdx) => (
-                                      <span 
-                                        key={sIdx}
-                                        className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}
-                                      >
-                                        {sent}{" "}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* External actions row */}
-                                <div className="pt-4 mt-auto flex gap-2">
-                                  <button
-                                    id="btn_whatsapp_share"
-                                    onClick={() => handleWhatsAppShare(currentResult.title, currentResult.summary)}
-                                    className="flex-1 py-1.5 bg-[#25D366] hover:bg-green-600 text-white font-extrabold text-[10px] sm:text-xs rounded flex items-center justify-center gap-1.5 cursor-pointer transition shadow-sm"
-                                  >
-                                    <Share2 size={13} />
-                                    WhatsApp Share
-                                  </button>
-                                  <button
-                                    id="btn_export_txt"
-                                    onClick={() => {
-                                      let details = `English Simplified:\n${currentResult.simplifiedEnglish}`;
-                                      if (selectedLang === "te") {
-                                        details += `\n\nTelugu Translation:\n${currentResult.teluguTranslation}`;
-                                      } else if (selectedLang === "hi") {
-                                        details += `\n\nHindi Translation:\n${currentResult.hindiTranslation}`;
-                                      }
-                                      handleDownloadTxt(currentResult.title, details);
-                                    }}
-                                    className="flex-1 py-1.5 border border-slate-800 hover:bg-slate-900 text-slate-800 hover:text-white font-extrabold text-[10px] sm:text-xs rounded flex items-center justify-center gap-1.5 cursor-pointer transition"
-                                  >
-                                    <Download size={13} />
-                                    Download Text
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Right Card: Translation Card (Only show if Telugu or Hindi has been selected) */}
-                              {selectedLang !== "en" && (
-                                <div className="flex flex-col justify-between">
-                                  <div className="space-y-3">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] font-bold text-white bg-[#B7791F] px-1.5 py-0.5 rounded uppercase font-sans">
-                                        {selectedLang === "te" ? "Telugu | తెలుగు" : "Hindi | हिन्दी"}
-                                      </span>
-                                    </div>
-                                    
-                                    <div className="text-sm leading-relaxed text-slate-850 font-sans tracking-wide m-0" id="translated_target_text">
-                                      {selectedLang === "te" ? (
-                                        splitIntoSentences(currentResult.teluguTranslation).map((sent, sIdx) => (
-                                          <span 
-                                            key={sIdx}
-                                            className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}
-                                          >
-                                            {sent}{" "}
-                                          </span>
-                                        ))
-                                      ) : selectedLang === "hi" ? (
-                                        splitIntoSentences(currentResult.hindiTranslation).map((sent, sIdx) => (
-                                          <span 
-                                            key={sIdx}
-                                            className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}
-                                          >
-                                            {sent}{" "}
-                                          </span>
-                                        ))
-                                      ) : null}
-                                    </div>
-                                  </div>
-
-                                  {/* Micro glossary helper bottom block */}
-                                  <div className="pt-4 mt-auto">
-                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                                      <p className="text-[10px] text-slate-500 font-extrabold uppercase italic leading-none m-0">Bilingual Glossary Aide</p>
-                                      <p className="text-xs text-slate-800 mt-1.5 mb-0 select-text font-sans">
-                                        {currentResult.glossary && currentResult.glossary.length > 0 ? (
-                                          <>
-                                            <span className="font-bold underline decoration-dotted decoration-gov-accent">{currentResult.glossary[0].term}:</span>{" "}
-                                            {currentResult.glossary[0].definition}
-                                          </>
-                                        ) : (
-                                          "Click or hover terms to explore structural translation definitions."
-                                        )}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Complex Legal Glossary definitions tooltip list */}
-                          {currentResult.glossary && currentResult.glossary.length > 0 && (
-                            <div className="border-t border-slate-200 pt-4" id="glossary-section-block">
-                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1">
-                                <BookOpen size={14} className="text-gov-accent" />
-                                Interactive Glossary Definitions
-                              </h4>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                {currentResult.glossary.map((item, idx) => (
-                                  <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200 rounded text-xs select-text">
-                                    <span className="font-extrabold text-gov-primary border-b border-dashed border-gov-accent cursor-help" title={item.definition}>
-                                      {item.term}
-                                    </span>
-                                    <p className="text-[11px] text-slate-500 mt-1 mb-0 leading-tight">{item.definition}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
+                            placeholder="Paste your government document text here... e.g., G.O.Ms.No. 143..."
+                            rows={8}
+                            className="w-full p-4 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                          />
+                          <div className="absolute bottom-3 right-3 text-[10px] text-gray-400">{inputText.length} chars</div>
                         </div>
                       )}
                     </div>
 
-                    {/* Bento Block 4: Recent History log */}
-                    {historyList.length > 0 && (
-                      <div className="clay-card rounded-xl bg-white p-5 border border-slate-200 shadow-sm flex flex-col">
-                        <div className="flex justify-between items-center mb-3">
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                            Recent Platform Simplifications
-                          </h3>
-                          <button 
-                            id="btn_history_clear_all"
-                            onClick={handleClearHistory}
-                            className="text-xs text-red-700 hover:underline font-bold cursor-pointer"
+                    {/* Target Language + Submit */}
+                    <div className="px-5 pb-5 space-y-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-gray-400 font-medium">Translate to:</span>
+                        {([{code: "en", label: "English"}, {code: "te", label: "Telugu"}, {code: "hi", label: "Hindi"}] as {code: "en"|"te"|"hi", label: string}[]).map(l => (
+                          <button
+                            key={l.code}
+                            onClick={() => setSelectedLang(l.code)}
+                            className={`px-3 py-1 text-xs rounded-full border transition cursor-pointer ${selectedLang === l.code ? "bg-blue-600 text-white border-blue-600 font-semibold" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
                           >
-                            Clear All
+                            {l.label}
                           </button>
+                        ))}
+                      </div>
+                      <button
+                        id="process-simplifier-btn"
+                        onClick={handleSimplifyDocument}
+                        disabled={isLocked || portalTrustScore === 0}
+                        className={`w-full py-3 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 transition ${(isLocked || portalTrustScore === 0) ? "bg-red-100 text-red-700 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer shadow-sm"}`}
+                      >
+                        {portalTrustScore === 0 ? "Access Revoked — Trust Score at 0" : isLocked ? "Upload Blocked — Invalid Document" : "Simplify & Translate"}
+                        {!(isLocked || portalTrustScore === 0) && <ArrowRight size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Feature Cards */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-white rounded-xl border border-gray-200 p-5">
+                      <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center mb-3">
+                        <FileText size={18} className="text-blue-600" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-1">Government-focused</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">Specialized in Indian government orders, circulars, and welfare documents.</p>
+                    </div>
+                    <div className="bg-white rounded-xl border border-gray-200 p-5">
+                      <div className="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center mb-3">
+                        <Volume2 size={18} className="text-green-600" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-1">3-language output</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">Get results in English, Telugu, and Hindi with voice narration support.</p>
+                    </div>
+                    <div className="bg-white rounded-xl border border-gray-200 p-5">
+                      <div className="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center mb-3">
+                        <BookOpen size={18} className="text-amber-600" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-1">Auto glossary</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">Complex legal terms are automatically detected and explained in plain language.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* RESULT VIEW */}
+              {!isProcessing && currentResult && (
+                <div className="px-6 py-6 space-y-4" id="result-view">
+
+                  {/* Error above result */}
+                  {errorMsg && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3" id="error_alert">
+                      <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
+                      <div>
+                        <p className="text-sm font-semibold text-red-800">Processing Error</p>
+                        <p className="text-xs text-red-600 mt-0.5">{errorMsg}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    {/* Top Controls */}
+                    <div className="border-b border-gray-100 px-5 py-3 flex flex-wrap justify-between items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        {(["summary", "plain", "overlay", "literal"] as const).map(mode => (
+                          <button
+                            key={mode}
+                            id={`tab_complexity_${mode}`}
+                            onClick={() => setComplexityMode(mode)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer ${complexityMode === mode ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                          >
+                            {mode === "summary" ? "Summary" : mode === "plain" ? "Plain Language" : mode === "overlay" ? "Compare" : "Original"}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {/* TTS controls */}
+                        {!(complexityMode === "plain" && (selectedLang === "te" || selectedLang === "hi")) && (
+                          <div className="flex items-center border border-gray-200 rounded-lg bg-white px-1 py-0.5 gap-1" id="speech_audio_controls">
+                            {isSpeaking ? (
+                              <>
+                                <button id="playback_stop_btn" onClick={handleCancelSpeech} className="p-1 text-red-600 hover:bg-gray-100 rounded cursor-pointer" title="Stop"><Square size={13} fill="currentColor" /></button>
+                                {isPaused ? (
+                                  <button id="playback_resume_btn" onClick={handleResumeSpeech} className="p-1 text-green-600 hover:bg-gray-100 rounded cursor-pointer" title="Resume"><Play size={13} fill="currentColor" /></button>
+                                ) : (
+                                  <button id="playback_pause_btn" onClick={handlePauseSpeech} className="p-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer" title="Pause"><Pause size={13} fill="currentColor" /></button>
+                                )}
+                              </>
+                            ) : (
+                              <button id="playback_play_btn" onClick={() => handleSpeak(getActiveTextForSpeech(currentResult))} className="flex items-center gap-1 px-2 py-1 text-gray-600 hover:bg-gray-100 rounded cursor-pointer text-xs font-medium" title="Listen">
+                                <Volume2 size={13} /> Listen
+                              </button>
+                            )}
+                            <select id="playback_speed_selector" value={playbackSpeed} onChange={(e) => handleSpeedChange(parseFloat(e.target.value))} className="text-[10px] font-bold outline-none border-l border-gray-200 pl-1 bg-white text-gray-600 cursor-pointer ml-1">
+                              <option value="0.5">0.5x</option>
+                              <option value="1">1x</option>
+                              <option value="1.25">1.25x</option>
+                              <option value="1.5">1.5x</option>
+                              <option value="2">2x</option>
+                            </select>
+                          </div>
+                        )}
+                        {/* Language */}
+                        <div className="flex gap-1">
+                          {([{code:"en",label:"EN"},{code:"te",label:"TE"},{code:"hi",label:"HI"}] as {code:"en"|"te"|"hi",label:string}[]).map(l => (
+                            <button key={l.code} onClick={() => setSelectedLang(l.code)} className={`px-2 py-1 text-xs rounded border transition cursor-pointer ${selectedLang === l.code ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>{l.label}</button>
+                          ))}
                         </div>
-                        <div className="space-y-2 max-h-[160px] overflow-y-auto">
-                          {historyList.slice(0, 10).map((hist) => (
-                            <div 
-                              id={`history_item_${hist.id}`}
-                              key={hist.id} 
-                              onClick={() => {
-                                setCurrentResult(hist);
-                                setInputText(hist.originalText || "");
-                              }}
-                              className={`flex items-center justify-between p-2.5 rounded bg-slate-50 hover:bg-slate-100 border transition cursor-pointer select-none ${
-                                currentResult?.id === hist.id ? "border-[#B7791F]" : "border-slate-200"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <FileText className="text-slate-400 shrink-0" size={14} />
-                                <span className="text-xs font-bold text-slate-800 truncate block">
-                                  {hist.title || "Government Directive"}
-                                </span>
+                        {/* Bookmark */}
+                        <button
+                          id="btn_bookmark_result"
+                          onClick={() => handleToggleSave(currentResult.id, savedList.some(s => s.id === currentResult.id))}
+                          className={`p-1.5 border rounded-lg cursor-pointer transition ${savedList.some(s => s.id === currentResult.id) ? "text-amber-500 border-amber-200 bg-amber-50" : "text-gray-400 border-gray-200 hover:border-gray-300"}`}
+                          title="Bookmark"
+                        >
+                          <Bookmark size={14} fill={savedList.some(s => s.id === currentResult.id) ? "currentColor" : "none"} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-5">
+                      {/* Title */}
+                      <div className="mb-5">
+                        <span className="text-[10px] bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded uppercase">Verified Document</span>
+                        <h2 className="text-lg font-bold text-gray-900 mt-1.5">{currentResult.title || "Government Document"}</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">Processed: {new Date(currentResult.timestamp).toLocaleString()}</p>
+                      </div>
+
+                      {/* Summary Mode */}
+                      {complexityMode === "summary" && (
+                        <div id="executive_summary_holder">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Executive Summary</p>
+                          <p className="text-sm border-l-4 border-blue-400 pl-4 italic leading-relaxed text-gray-700">{currentResult.summary}</p>
+                        </div>
+                      )}
+
+                      {/* Original Mode */}
+                      {complexityMode === "literal" && (
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-xs whitespace-pre-wrap leading-relaxed select-text" id="original_pasted_holder">
+                          {currentResult.originalText}
+                        </div>
+                      )}
+
+                      {/* Overlay Mode */}
+                      {complexityMode === "overlay" && (() => {
+                        const originalSentences = splitIntoSentences(currentResult.originalText);
+                        const activeSimplifiedText = selectedLang === "te" ? currentResult.teluguTranslation : selectedLang === "hi" ? currentResult.hindiTranslation : currentResult.simplifiedEnglish;
+                        const simplifiedSentences = splitIntoSentences(activeSimplifiedText);
+                        const matchedSimpIndex = getMatchedSimplifiedIndex(hoveredOrigIdx, originalSentences, simplifiedSentences);
+                        const activeOriginalSentence = originalSentences[hoveredOrigIdx] || "";
+                        const activeSimplifiedSentence = simplifiedSentences[matchedSimpIndex] || "";
+
+                        return (
+                          <div className="space-y-4" id="overlay_comparison_holder">
+                            <div className="flex flex-wrap justify-between items-center gap-2">
+                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <Info size={14} className="text-blue-500" />
+                                Hover over clauses to see plain language equivalent
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-mono text-slate-400 block shrink-0">{new Date(hist.timestamp).toLocaleDateString()}</span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteItem(hist.id);
-                                  }}
-                                  className="text-xs font-bold text-red-500 hover:text-red-700 px-1 hover:bg-slate-200 rounded cursor-pointer"
-                                  title="Delete Record"
-                                >
-                                  <Trash2 size={12} />
+                              <div className="flex gap-2" id="overlay_comparison_header_bar">
+                                <button id="overlay_copy_all_btn" onClick={handleCopyOverlaySideBySide} className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium transition cursor-pointer ${overlayCopied ? "bg-green-50 border-green-300 text-green-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+                                  {overlayCopied ? <Check size={12} /> : <Copy size={12} />}
+                                  {overlayCopied ? "Copied!" : "Copy all"}
+                                </button>
+                                <button id="overlay_print_btn" onClick={handlePrintOverlay} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-medium text-gray-600 transition cursor-pointer">
+                                  <Printer size={12} />
+                                  Print
                                 </button>
                               </div>
                             </div>
-                          ))}
+
+                            <div className="grid grid-cols-2 gap-4" id="overlay_split_view">
+                              {/* Original */}
+                              <div className="border border-red-100 rounded-xl overflow-hidden flex flex-col h-80">
+                                <div className="bg-red-50 px-3 py-2 border-b border-red-100 flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-red-700 uppercase tracking-wide">Original</span>
+                                  <span className="text-[9px] text-red-400">{originalSentences.length} clauses</span>
+                                </div>
+                                <div className="p-3 space-y-2 overflow-y-auto flex-1">
+                                  {originalSentences.map((sent, idx) => (
+                                    <div
+                                      key={idx}
+                                      id={`overlay_orig_sent_${idx}`}
+                                      onClick={() => setHoveredOrigIdx(idx)}
+                                      onMouseEnter={() => setHoveredOrigIdx(idx)}
+                                      className={`p-2 rounded-lg border text-xs leading-relaxed cursor-pointer transition ${hoveredOrigIdx === idx ? "bg-red-50 border-red-200 text-red-900" : "border-transparent text-gray-500 hover:bg-gray-50"}`}
+                                    >
+                                      <div className="flex gap-2">
+                                        <span className={`text-[9px] font-bold px-1 rounded shrink-0 ${hoveredOrigIdx === idx ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-500"}`}>{idx + 1}</span>
+                                        <div className="grow select-text">{renderTextWithGlossaryHighlights(sent, currentResult.glossary || [])}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Simplified */}
+                              <div className="border border-green-100 rounded-xl overflow-hidden flex flex-col h-80">
+                                <div className="bg-green-50 px-3 py-2 border-b border-green-100 flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-green-700 uppercase tracking-wide">Simplified</span>
+                                  <span className="text-[9px] text-green-500">{selectedLang === "te" ? "Telugu" : selectedLang === "hi" ? "Hindi" : "English"}</span>
+                                </div>
+                                <div className="p-3 space-y-2 overflow-y-auto flex-1">
+                                  {simplifiedSentences.map((sent, idx) => (
+                                    <div
+                                      key={idx}
+                                      id={`overlay_simp_sent_${idx}`}
+                                      onClick={() => setHoveredOrigIdx(getMatchedOriginalIndex(idx, originalSentences, simplifiedSentences))}
+                                      onMouseEnter={() => setHoveredOrigIdx(getMatchedOriginalIndex(idx, originalSentences, simplifiedSentences))}
+                                      className={`p-2 rounded-lg border text-xs leading-relaxed cursor-pointer transition ${matchedSimpIndex === idx ? "bg-green-50 border-green-200 text-green-900" : "border-transparent text-gray-500 hover:bg-gray-50"}`}
+                                    >
+                                      <div className="flex gap-2">
+                                        <span className={`text-[9px] font-bold px-1 rounded shrink-0 ${matchedSimpIndex === idx ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{idx + 1}</span>
+                                        <div className="grow select-text">{sent}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Insights */}
+                            {activeOriginalSentence && (
+                              <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl" id="overlay_insights_panel">
+                                <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-gray-600">
+                                  <FileCheck size={14} className="text-blue-500" />
+                                  Clause #{hoveredOrigIdx + 1} <ArrowRight size={12} className="text-gray-400" /> Plain #{matchedSimpIndex + 1}
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                  <div className="bg-white p-3 rounded-lg border border-gray-200 text-center">
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold">Length Reduction</p>
+                                    {(() => {
+                                      const origLen = activeOriginalSentence.split(/\s+/).filter(Boolean).length;
+                                      const simpLen = activeSimplifiedSentence ? activeSimplifiedSentence.split(/\s+/).filter(Boolean).length : 0;
+                                      const pct = origLen > 0 ? Math.max(0, Math.round(((origLen - simpLen) / origLen) * 100)) : 0;
+                                      return <p className="text-xl font-bold text-gray-900 mt-1">{pct}% <span className="text-xs text-green-600 font-normal">shorter</span></p>;
+                                    })()}
+                                  </div>
+                                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold mb-2">Complexity</p>
+                                    {(() => {
+                                      const origLen = activeOriginalSentence.split(/\s+/).filter(Boolean).length;
+                                      const simpLen = activeSimplifiedSentence ? activeSimplifiedSentence.split(/\s+/).filter(Boolean).length : 0;
+                                      const ratio = origLen > 0 ? Math.min(100, Math.round((simpLen / origLen) * 100)) : 25;
+                                      return (
+                                        <div className="space-y-1.5">
+                                          <div>
+                                            <div className="flex justify-between text-[9px] text-gray-400 mb-0.5"><span>Original</span><span>100%</span></div>
+                                            <div className="h-1.5 bg-red-200 rounded-full" />
+                                          </div>
+                                          <div>
+                                            <div className="flex justify-between text-[9px] text-gray-400 mb-0.5"><span>Simplified</span><span>{ratio}%</span></div>
+                                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-green-400 rounded-full" style={{ width: `${ratio}%` }} /></div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold mb-2">Jargon Found</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {(() => {
+                                        const terms = (currentResult.glossary || []).filter(item => {
+                                          const escaped = item.term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                                          return new RegExp(escaped, 'i').test(activeOriginalSentence);
+                                        });
+                                        return terms.length > 0 ? terms.map((item, i) => (
+                                          <span key={i} className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded cursor-help" title={item.definition}>{item.term}</span>
+                                        )) : <p className="text-[10px] text-gray-400 italic">None found</p>;
+                                      })()}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Plain Language Mode */}
+                      {complexityMode === "plain" && (
+                        <div className={`grid gap-6 ${selectedLang !== "en" ? "grid-cols-2" : "grid-cols-1"}`} id="bilingual_output_grid">
+                          {/* English */}
+                          <div className="flex flex-col">
+                            <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded uppercase inline-block mb-3 w-fit">Simplified English</span>
+                            <div className="text-sm leading-relaxed text-gray-800 flex-1" id="english_simplified_text">
+                              {splitIntoSentences(currentResult.simplifiedEnglish).map((sent, sIdx) => (
+                                <span key={sIdx} className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}>{sent}{" "}</span>
+                              ))}
+                            </div>
+                            <div className="pt-4 mt-auto flex gap-2">
+                              <button
+                                id="btn_whatsapp_share"
+                                onClick={() => handleWhatsAppShare(currentResult.title, currentResult.summary)}
+                                className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition shadow-sm"
+                              >
+                                <Share2 size={13} /> WhatsApp
+                              </button>
+                              <button
+                                id="btn_export_txt"
+                                onClick={() => {
+                                  let details = `English Simplified:\n${currentResult.simplifiedEnglish}`;
+                                  if (selectedLang === "te") details += `\n\nTelugu:\n${currentResult.teluguTranslation}`;
+                                  if (selectedLang === "hi") details += `\n\nHindi:\n${currentResult.hindiTranslation}`;
+                                  handleDownloadTxt(currentResult.title, details);
+                                }}
+                                className="flex-1 py-2 border border-gray-300 hover:bg-gray-900 text-gray-800 hover:text-white font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition"
+                              >
+                                <Download size={13} /> Download
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Translation */}
+                          {selectedLang !== "en" && (
+                            <div className="flex flex-col border-l border-gray-100 pl-6">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase inline-block mb-3 w-fit ${selectedLang === "te" ? "bg-amber-50 text-amber-700" : "bg-orange-50 text-orange-700"}`}>
+                                {selectedLang === "te" ? "Telugu | తెలుగు" : "Hindi | हिन्दी"}
+                              </span>
+                              <div className="text-sm leading-relaxed text-gray-800 flex-1 tracking-wide" id="translated_target_text">
+                                {selectedLang === "te" ? (
+                                  splitIntoSentences(currentResult.teluguTranslation).map((sent, sIdx) => (
+                                    <span key={sIdx} className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}>{sent}{" "}</span>
+                                  ))
+                                ) : (
+                                  splitIntoSentences(currentResult.hindiTranslation).map((sent, sIdx) => (
+                                    <span key={sIdx} className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}>{sent}{" "}</span>
+                                  ))
+                                )}
+                              </div>
+                              {currentResult.glossary && currentResult.glossary.length > 0 && (
+                                <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Glossary Aide</p>
+                                  <p className="text-xs text-gray-700"><span className="font-bold">{currentResult.glossary[0].term}:</span> {currentResult.glossary[0].definition}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
+                      )}
+
+                      {/* Glossary */}
+                      {currentResult.glossary && currentResult.glossary.length > 0 && complexityMode !== "overlay" && (
+                        <div className="border-t border-gray-100 pt-5 mt-5" id="glossary-section-block">
+                          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                            <BookOpen size={13} className="text-blue-500" />
+                            Glossary
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {currentResult.glossary.map((item, idx) => (
+                              <div key={idx} className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs select-text">
+                                <span className="font-bold text-gray-900 border-b border-dashed border-gray-300 cursor-help" title={item.definition}>{item.term}</span>
+                                <p className="text-gray-500 mt-1 leading-relaxed">{item.definition}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="border-t border-gray-100 pt-4 mt-5 flex items-center justify-between gap-3 flex-wrap">
+                        <button
+                          onClick={() => handleDeleteItem(currentResult.id)}
+                          className="flex items-center gap-1.5 px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium transition cursor-pointer"
+                        >
+                          <Trash2 size={13} /> Delete
+                        </button>
+                        <button
+                          onClick={() => { setCurrentResult(null); setInputText(""); setFileDetails(null); setErrorMsg(""); }}
+                          className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-xs font-medium transition cursor-pointer"
+                        >
+                          <Plus size={13} /> New Document
+                        </button>
                       </div>
-                    )}
-                    
+                    </div>
                   </div>
-                  
                 </div>
               )}
-              
             </div>
           )}
 
-          {/* TAB 2: PORTAL DASHBOARD TAB */}
-          {activeTab === "dashboard" && (
-            <div className="space-y-6" id="dashboard_tab_panel">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-extrabold tracking-tight m-0 text-slate-900 font-sans">Citizen Auditing Dashboard</h2>
-                  <p className="text-xs text-slate-500">Track saved documentation, credibility scores, and account certifications.</p>
-                </div>
-                {user ? (
-                  <div className="p-1 px-3 bg-green-50 border border-green-200 text-green-700 font-bold rounded-lg text-xs">
-                     ● Secure Government Session Active
-                  </div>
-                ) : (
-                  <button 
-                    onClick={() => setShowAuthModal(true)}
-                    className="px-4 py-2 bg-gov-accent hover:bg-yellow-600 text-slate-900 font-bold text-xs rounded transition-colors shadow-sm cursor-pointer"
-                  >
-                    Link Secure Account
-                  </button>
+          {/* HISTORY TAB */}
+          {activeTab === "history" && (
+            <div className="max-w-3xl mx-auto px-6 py-8" id="history_tab_panel">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">History</h2>
+                {historyList.length > 0 && (
+                  <button id="btn_history_clear_all" onClick={handleClearHistory} className="text-xs text-red-600 hover:text-red-700 font-medium cursor-pointer">Clear all</button>
                 )}
               </div>
-
-              {/* Bento Grid layout inside dashboard */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                {/* Stats Block 1: User Profile credentials */}
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-[#B7791F]">National Resident Profile</h3>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-900 text-[#B7791F] font-bold text-lg flex items-center justify-center">
-                      {user ? user.displayName.charAt(0) : "R"}
-                    </div>
-                    <div>
-                      <h4 className="font-sans font-bold text-[#1A202C]">{user ? user.displayName : "Resident Visitor"}</h4>
-                      <p className="text-[11px] text-[#4A5568]">{user ? user.email : "No connected email profile"}</p>
-                    </div>
-                  </div>
-                  <div className="pt-2 border-t border-slate-100">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500">Audit Status:</span>
-                      <span className="font-bold text-green-700">Level 1 - Registered Citizen</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs mt-1.5">
-                      <span className="text-slate-500">IP Connection Node:</span>
-                      <span className="font-mono text-slate-600">DEL-01-NIC</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stats Block 2: Trust score audit history */}
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Trust Credit Audits</h3>
-                  <div className="text-3xl font-mono font-extrabold text-[#1A202C]">{portalTrustScore}/100</div>
-                  <p className="text-xs text-slate-500">
-                    Uploading verified state orders improves credit score. Fabricated or spammed documents trigger a decrement in portal authority index parameters.
-                  </p>
-                  <div className="w-full bg-slate-100 rounded-full h-1.5">
-                    <div className="bg-gov-accent h-full rounded-full" style={{ width: `${portalTrustScore}%` }}></div>
-                  </div>
-                </div>
-
-                {/* Stats Block 3: Verification statistics */}
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-[#B7791F]">Active Session Telemetry</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-2 bg-slate-50 rounded">
-                      <span className="text-[10px] text-slate-400 block font-bold leading-none uppercase">Verified Cases</span>
-                      <span className="text-xl font-bold font-sans text-slate-800 block mt-1">{historyList.length}</span>
-                    </div>
-                    <div className="p-2 bg-slate-50 rounded">
-                      <span className="text-[10px] text-slate-400 block font-bold leading-none uppercase">Bookmarked</span>
-                      <span className="text-xl font-bold font-sans text-slate-800 block mt-1">{savedList.length}</span>
-                    </div>
-                  </div>
-                  <div className="text-[11px] text-slate-400 italic">
-                    All document session hashes are cryptographically cached in state for privacy offline protocols.
-                  </div>
-                </div>
-              </div>
-
-              {/* Bookmarked/Saved items grid */}
-              <div className="clay-card rounded-xl p-6 bg-white border border-slate-200">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-1.5">
-                  <Bookmark size={16} className="text-gov-accent" />
-                  Your Bookmarked & Saved Simplified Documents
-                </h3>
-
-                {savedList.length === 0 ? (
-                  <div className="p-8 text-center text-slate-450 border-2 border-dashed border-slate-200 rounded">
-                    <h4 className="text-xs font-bold font-sans text-slate-500 m-0">No Saved Documents Bookmarked</h4>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Simplify a document in the main workspace and click bookmark to preserve high-trust versions.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {savedList.map((saved) => (
-                      <div 
-                        id={`saved_item_${saved.id}`}
-                        key={saved.id} 
-                        className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col justify-between space-y-3"
-                      >
-                        <div>
-                          <div className="flex justify-between items-start">
-                            <span className="text-[9px] bg-slate-200 text-slate-600 font-extrabold px-1.5 py-0.5 rounded uppercase">
-                              {saved.documentType || "Regulatory Directive"}
-                            </span>
-                            <button
-                              id={`remove_bookmark_${saved.id}`}
-                              onClick={() => handleToggleSave(saved.id, true)}
-                              className="text-xs font-bold text-red-600 hover:underline cursor-pointer"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                          <h4 className="text-xs font-extrabold text-slate-900 mt-1.5 font-sans m-0">{saved.title}</h4>
-                          <p className="text-[11px] text-slate-600 mt-1 truncate">{saved.summary}</p>
-                        </div>
-                        <div className="flex gap-2 pt-2 border-t border-slate-200">
-                          <button
-                            id={`load_saved_home_${saved.id}`}
-                            onClick={() => {
-                              setCurrentResult(saved);
-                              setInputText(saved.originalText || "");
-                              setActiveTab("home");
-                            }}
-                            className="flex-1 py-1 bg-gov-accent hover:bg-yellow-600 text-slate-900 font-extrabold text-[10px] rounded cursor-pointer text-center"
-                          >
-                            Explore in Pane
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: HOW IT WORKS TAB */}
-          {activeTab === "how-it-works" && (
-            <div className="space-y-6" id="how_it_works_tab_panel">
-              <div className="text-center max-w-xl mx-auto space-y-2">
-                <h2 className="text-2xl font-extrabold text-slate-900 font-sans tracking-tight m-0">How DocuEase Operates</h2>
-                <p className="text-xs text-slate-500">
-                  Transparency initiatives utilize four structured layers of Indian administrative natural language processing to maximize accessible outcomes.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                
-                {/* Step 1 */}
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-3 relative">
-                  <span className="absolute top-4 right-4 text-4xl font-extrabold text-slate-100 font-mono">01</span>
-                  <div className="w-8 h-8 rounded-full bg-[#1A202C] text-white font-bold flex items-center justify-center">
-                     1
-                  </div>
-                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider font-sans mt-2.5">Upload Official File</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                     Paste heavy bureaucratic legal guidelines or drag in official central/state PDF, DOCX or image files directly.
-                  </p>
-                </div>
-
-                {/* Step 2 */}
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-3 relative">
-                  <span className="absolute top-4 right-4 text-4xl font-extrabold text-slate-100 font-mono">02</span>
-                  <div className="w-8 h-8 rounded-full bg-[#1A202C] text-white font-bold flex items-center justify-center">
-                     2
-                  </div>
-                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider font-sans mt-2.5">AI Integrity Validation</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                     Our custom trained NLP checks if the directive matches official public service rules, calculating corresponding citizen trust scores.
-                  </p>
-                </div>
-
-                {/* Step 3 */}
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-3 relative">
-                  <span className="absolute top-4 right-4 text-4xl font-extrabold text-slate-100 font-mono">03</span>
-                  <div className="w-8 h-8 rounded-full bg-[#1A202C] text-white font-bold flex items-center justify-center">
-                     3
-                  </div>
-                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider font-sans mt-2.5">Grammar Simplification</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                     Complex legalese (such as force majeure, ex-gratia) gets transformed into readable 8th-grade structures.
-                  </p>
-                </div>
-
-                {/* Step 4 */}
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-3 relative">
-                  <span className="absolute top-4 right-4 text-4xl font-extrabold text-slate-100 font-mono">04</span>
-                  <div className="w-8 h-8 rounded-full bg-[#1A202C] text-white font-bold flex items-center justify-center">
-                     4
-                  </div>
-                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider font-sans mt-2.5">Regional Multilingual Output</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                     The system synthesizes precise Unicode Hindi and Telugu translations, instantly equipped with synced audio vocal narration.
-                  </p>
-                </div>
-
-              </div>
-              
-              {/* Informational Call to Action card */}
-              <div className="p-5 bg-slate-900 rounded-xl text-white flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-gov-accent">Have questions regarding regional language standards?</h4>
-                  <p className="text-xs text-slate-300">All translations conform with the Digital India Language Translation guidelines (MeitY).</p>
-                </div>
-                <button 
-                  onClick={() => setActiveTab("contact")}
-                  className="px-4 py-2 bg-gov-accent hover:bg-yellow-600 text-slate-900 font-bold text-xs rounded transition cursor-pointer"
-                >
-                  Contact Language Translators
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: ABOUT PLATFORM TAB */}
-          {activeTab === "about" && (
-            <div className="space-y-6" id="about_tab_panel">
-              <div className="clay-card rounded-xl p-6 bg-white border border-slate-200 md:flex items-center gap-6">
-                <div className="md:w-1/3 text-center py-4 bg-slate-50 rounded-lg shrink-0 flex flex-col items-center justify-center border border-slate-200 shadow-inner">
-                  <Landmark size={48} className="text-gov-accent mb-2" />
-                  <h3 className="text-lg font-extrabold text-slate-900 m-0">DocuEase Initiative</h3>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-0.5">Government Citizen Portal</p>
-                </div>
-                <div className="space-y-3 mt-4 md:mt-0">
-                  <h2 className="text-xl font-extrabold text-slate-900 font-sans tracking-tight">Our Democratic Digital Mission</h2>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                     Legal notices, municipal guidelines, welfare applications and circulars can often seem written in highly complex ways that confuse normal citizens. It is our goal to reduce cognitive fatigue by translating directives into real straightforward dialects.
-                  </p>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                     Administered fully with compliance rules set out by the Ministry of Electronics and Information Technology, our software bridges administrative divides. We integrate accessibility directly with speed controls and screen elements designed in deep contrast layout compatibility.
-                  </p>
-                </div>
-              </div>
-
-              {/* Bento informational blocks */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-2">
-                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Privacy & Security Guidelines</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                     Document contents and transcripts remain within the sandbox memory session bounds. None of your confidential data is ever kept or indexed. All analysis parameters comply with standard cryptography.
-                  </p>
-                </div>
-                <div className="clay-card rounded-xl p-5 bg-white border border-slate-200 space-y-2">
-                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Multilingual Accent Narration</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                     Web Speech utilizes your operating system’s official voice indexes to guarantee appropriate pronunciation in Hindi and Telugu Unicode formats without converting values into erratic numbers.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: CONTACT PAGE TAB */}
-          {activeTab === "contact" && (
-            <div className="max-w-2xl mx-auto space-y-6" id="contact_tab_panel">
-              <div className="text-center space-y-1">
-                <h2 className="text-2xl font-extrabold text-slate-900 font-sans">Contact Platform Officials</h2>
-                <p className="text-xs text-slate-500">Reach the Ministry of Electronics & IT (MeitY) technical advisory department.</p>
-              </div>
-
-              {contactSuccess ? (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center space-y-2 text-green-800" id="contact_success_alert">
-                  <FileCheck size={32} className="mx-auto text-green-600 animate-bounce" />
-                  <h4 className="font-bold text-sm">Official Inquiry Dispatched</h4>
-                  <p className="text-xs">Your transmission code is #{Math.floor(Math.random() * 900000 + 100000)}. Platform officers will email a callback report within 48 business hours.</p>
+              {historyList.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  <Clock size={36} className="mx-auto mb-3 opacity-30" />
+                  <p className="font-medium text-gray-500">No documents processed yet</p>
+                  <p className="text-xs mt-1">Simplified documents will appear here</p>
                 </div>
               ) : (
-                <form onSubmit={handleContactSubmit} className="clay-card rounded-xl p-6 bg-white border border-slate-200 space-y-4" id="contact_form">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1" htmlFor="contact_name">Your Citizen Legal Name</label>
-                      <input
-                        id="contact_name"
-                        type="text"
-                        required
-                        value={contactForm.name}
-                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                        placeholder="e.g. Likhith Chettipally"
-                        className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent outline-none"
-                      />
+                <div className="space-y-3">
+                  {historyList.map(hist => (
+                    <div key={hist.id} id={`history_item_${hist.id}`} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between gap-4 hover:border-gray-300 transition">
+                      <div
+                        className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                        onClick={() => { setCurrentResult(hist); setInputText(hist.originalText || ""); setActiveTab("home"); }}
+                      >
+                        <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                          <FileText size={16} className="text-blue-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{hist.title || "Government Document"}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{new Date(hist.timestamp).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleToggleSave(hist.id, savedList.some(s => s.id === hist.id))}
+                          className={`p-2 border rounded-lg cursor-pointer transition ${savedList.some(s => s.id === hist.id) ? "text-amber-500 border-amber-200 bg-amber-50" : "text-gray-400 border-gray-200 hover:border-gray-300"}`}
+                        >
+                          <Bookmark size={14} fill={savedList.some(s => s.id === hist.id) ? "currentColor" : "none"} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteItem(hist.id)}
+                          className="p-2 border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 rounded-lg cursor-pointer transition"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1" htmlFor="contact_email">Citizen Email Address</label>
-                      <input
-                        id="contact_email"
-                        type="email"
-                        required
-                        value={contactForm.email}
-                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                        placeholder="e.g. resident@nic.in"
-                        className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent outline-none"
-                      />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SAVED TAB */}
+          {activeTab === "saved" && (
+            <div className="max-w-3xl mx-auto px-6 py-8" id="saved_tab_panel">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Saved Documents</h2>
+              </div>
+              {savedList.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  <Bookmark size={36} className="mx-auto mb-3 opacity-30" />
+                  <p className="font-medium text-gray-500">No saved documents</p>
+                  <p className="text-xs mt-1">Bookmark documents from the result view to save them here</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {savedList.map(saved => (
+                    <div key={saved.id} id={`saved_item_${saved.id}`} className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-[10px] bg-gray-100 text-gray-500 font-semibold px-2 py-0.5 rounded uppercase">{saved.documentType || "Document"}</span>
+                          <button id={`remove_bookmark_${saved.id}`} onClick={() => handleToggleSave(saved.id, true)} className="text-xs text-red-500 hover:text-red-700 font-medium cursor-pointer shrink-0">Remove</button>
+                        </div>
+                        <h4 className="text-sm font-semibold text-gray-900 mt-2">{saved.title}</h4>
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{saved.summary}</p>
+                      </div>
+                      <button
+                        id={`load_saved_home_${saved.id}`}
+                        onClick={() => { setCurrentResult(saved); setInputText(saved.originalText || ""); setActiveTab("home"); }}
+                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg cursor-pointer text-center transition"
+                      >
+                        Open Document
+                      </button>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1" htmlFor="contact_code">
-                      Reference Document Verification Code (Optional)
-                    </label>
-                    <input
-                      id="contact_code"
-                      type="text"
-                      value={contactForm.idCode}
-                      onChange={(e) => setContactForm({ ...contactForm, idCode: e.target.value })}
-                      placeholder="e.g., doc_7f3b2a"
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent outline-none font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1" htmlFor="contact_msg">Inquiry Details</label>
-                    <textarea
-                      id="contact_msg"
-                      required
-                      rows={4}
-                      value={contactForm.message}
-                      onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                      placeholder="Specify language concerns or document OCR mismatch details here..."
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded focus:ring-1 focus:ring-gov-accent outline-none"
-                    ></textarea>
-                  </div>
-
-                  <button
-                    id="btn_submit_contact"
-                    type="submit"
-                    className="w-full py-2.5 bg-gov-primary hover:bg-slate-800 text-white font-bold text-xs tracking-wide uppercase rounded font-sans flex items-center justify-center gap-2 cursor-pointer shadow"
-                  >
-                    <Send size={14} /> Submit Inquiry
-                  </button>
-                </form>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -2259,213 +1653,91 @@ export default function App() {
         </div>
       </main>
 
-      {/* Institutional Footer Block */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-white py-6 px-4" id="main_footer">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
-          <div className="text-center md:text-left space-y-1">
-            <p className="font-semibold text-slate-300">National Informatics Centre (NIC) Gateway Portal Collaboration</p>
-            <p className="text-slate-500">© 2026 DocuEase. Ministry of Electronics & IT, Government of India. All rights reserved.</p>
-          </div>
-          <div className="flex gap-4 text-slate-400">
-            <button onClick={() => setActiveTab("about")} className="hover:text-gov-accent transition cursor-pointer">Privacy Policy</button>
-            <span>|</span>
-            <button onClick={() => setActiveTab("how-it-works")} className="hover:text-gov-accent transition cursor-pointer">Accessibility Statement</button>
-            <span>|</span>
-            <button onClick={() => setActiveTab("contact")} className="hover:text-gov-accent transition cursor-pointer">Support</button>
-          </div>
-        </div>
-      </footer>
-
-      {/* FLOATING PERSISTENT AUDIO PLAYER WIDGET */}
-      {isSpeaking && activeTab !== "home" && (
-        <div 
-          id="floating_audio_player"
-          className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-slate-700 text-white rounded-xl shadow-2xl p-4 max-w-sm w-[90%] sm:w-80 flex flex-col gap-3 transition-all duration-300 transform animate-none"
-        >
-          {/* Header row */}
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+      {/* FLOATING AUDIO PLAYER */}
+      {isSpeaking && (
+        <div id="floating_audio_player" className="fixed bottom-6 right-6 z-50 bg-gray-900 border border-gray-700 text-white rounded-xl shadow-2xl p-4 w-72 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="relative flex items-center justify-center">
-                <span className="absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75 animate-ping"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </div>
-              <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-400">
-                {isPaused ? "Narration Paused" : "Now Broadcasting"}
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{isPaused ? "Paused" : "Playing"}</span>
             </div>
-            <button
-              onClick={handleCancelSpeech}
-              className="text-slate-400 hover:text-white transition-colors cursor-pointer"
-              title="Stop and Dismiss Player"
-              id="floating_close_btn"
-            >
-              <X size={16} />
-            </button>
+            <button onClick={handleCancelSpeech} className="text-gray-400 hover:text-white cursor-pointer" id="floating_close_btn"><X size={15} /></button>
           </div>
-
-          {/* Title and metadata */}
-          <div className="space-y-1">
-            <p className="text-xs font-semibold text-slate-200 truncate" title={currentResult?.title || "Simplified Document"}>
-              {currentResult?.title || "Simplified Document Legislation"}
-            </p>
-            <p className="text-[10px] text-slate-400">
-              Language Accent: {selectedLang === "te" ? "Telugu (తెలుగు)" : selectedLang === "hi" ? "Hindi (हिन्दी)" : "English (Simplified)"}
-            </p>
-          </div>
-
-          {/* Controls button panel */}
-          <div className="flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-800">
-            <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-200 truncate font-medium">{currentResult?.title || "Document"}</p>
+          <div className="flex items-center justify-between bg-gray-800 p-2 rounded-lg">
+            <div className="flex gap-2">
               {isPaused ? (
-                <button
-                  id="floating_resume_btn"
-                  onClick={handleResumeSpeech}
-                  className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full transition cursor-pointer flex items-center justify-center"
-                  title="Resume Narration"
-                >
-                  <Play size={14} fill="currentColor" />
-                </button>
+                <button id="floating_resume_btn" onClick={handleResumeSpeech} className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full cursor-pointer"><Play size={13} fill="currentColor" /></button>
               ) : (
-                <button
-                  id="floating_pause_btn"
-                  onClick={handlePauseSpeech}
-                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-full transition cursor-pointer flex items-center justify-center"
-                  title="Pause Narration"
-                >
-                  <Pause size={14} fill="currentColor" />
-                </button>
+                <button id="floating_pause_btn" onClick={handlePauseSpeech} className="p-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-full cursor-pointer"><Pause size={13} fill="currentColor" /></button>
               )}
-
-              <button
-                id="floating_stop_btn"
-                onClick={handleCancelSpeech}
-                className="p-1.5 bg-red-950/40 hover:bg-red-900 border border-red-500/30 text-red-400 hover:text-white rounded-full transition cursor-pointer flex items-center justify-center"
-                title="Stop Narration"
-              >
-                <Square size={14} fill="currentColor" />
-              </button>
+              <button id="floating_stop_btn" onClick={handleCancelSpeech} className="p-1.5 bg-red-900/60 hover:bg-red-800 text-red-400 rounded-full cursor-pointer"><Square size={13} fill="currentColor" /></button>
             </div>
-
-            {/* Speed selection dropdown */}
-            <div className="flex items-center gap-1">
-              <span className="text-[9px] text-slate-400 font-bold uppercase">Speed:</span>
-              <select
-                id="floating_playback_speed"
-                value={playbackSpeed}
-                onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
-                className="text-[10px] bg-slate-900 text-slate-100 font-bold border border-slate-700 rounded px-1 py-0.5 outline-none cursor-pointer"
-                title="Adjust Audio Speed"
-              >
-                <option value="0.75">0.75x</option>
-                <option value="1">1.0x</option>
-                <option value="1.25">1.25x</option>
-                <option value="1.5">1.5x</option>
-                <option value="1.75">1.75x</option>
-                <option value="2">2.0x</option>
-              </select>
-            </div>
+            <select id="floating_playback_speed" value={playbackSpeed} onChange={(e) => handleSpeedChange(parseFloat(e.target.value))} className="text-[10px] bg-gray-900 text-white font-bold border border-gray-700 rounded px-1 py-0.5 cursor-pointer outline-none">
+              <option value="0.75">0.75x</option>
+              <option value="1">1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
           </div>
-
-          {/* Quick jump back to Document Tab */}
-          <button
-            onClick={() => setActiveTab("home")}
-            className="w-full text-center py-1.5 bg-slate-800 hover:bg-gov-accent text-slate-200 hover:text-white font-sans font-bold text-[10px] tracking-wide uppercase rounded-md transition duration-150 cursor-pointer flex items-center justify-center gap-1"
-            id="floating_go_home_btn"
-          >
-            <BookOpen size={12} />
-            <span>Return to Document Text</span>
+          <button onClick={() => setActiveTab("home")} className="w-full text-center py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-[10px] font-semibold uppercase rounded-lg cursor-pointer flex items-center justify-center gap-1" id="floating_go_home_btn">
+            <BookOpen size={11} /> View document
           </button>
         </div>
       )}
 
-      {/* SECURE GATEWAY EVENT NOTIFICATIONS */}
+      {/* NOTIFICATION TOAST */}
       {notification && (
-        <div 
-          id="portal_notification_toast"
-          className="fixed top-20 right-6 z-50 bg-slate-900 text-white border border-slate-700 p-4 rounded-xl shadow-2xl flex items-center gap-3 max-w-sm w-[90%] sm:w-auto transition-all duration-300 transform translate-y-0 opacity-100"
-          role="status"
-        >
-          <div className="p-1 bg-emerald-500 rounded-full text-slate-900 shrink-0">
-            <Check size={14} strokeWidth={3} />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-bold text-slate-100">{notification.message}</p>
-          </div>
-          <button 
-            onClick={() => setNotification(null)}
-            className="text-slate-400 hover:text-white transition-colors ml-2 cursor-pointer outline-none"
-            id="dismiss_toast_btn"
-            title="Dismiss Alert"
-          >
-            <X size={14} />
-          </button>
+        <div id="portal_notification_toast" className="fixed top-4 right-6 z-50 bg-gray-900 text-white border border-gray-700 p-4 rounded-xl shadow-2xl flex items-center gap-3 max-w-sm" role="status">
+          <div className="p-1 bg-emerald-500 rounded-full text-gray-900 shrink-0"><Check size={13} strokeWidth={3} /></div>
+          <p className="text-xs font-medium text-gray-100 flex-1">{notification.message}</p>
+          <button id="dismiss_toast_btn" onClick={() => setNotification(null)} className="text-gray-400 hover:text-white cursor-pointer"><X size={13} /></button>
         </div>
       )}
 
-      {/* CITIZEN PRINT DOCUMENT FOR OVERLAY COMPARISON MODE */}
+      {/* PRINT OVERLAY */}
       {currentResult && (
-        <div id="citizen-print-overlay-document" className="hidden print:block p-8 max-w-4xl mx-auto bg-white text-slate-900 font-sans">
-          <div className="border-b border-slate-300 pb-4 mb-6">
+        <div id="citizen-print-overlay-document" className="hidden print:block p-8 max-w-4xl mx-auto bg-white text-gray-900 font-sans">
+          <div className="border-b border-gray-300 pb-4 mb-6">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Official Simplification Study</span>
-                <h1 className="text-xl font-bold text-slate-900 mt-0.5">{currentResult.title || "Regulatory Circular"}</h1>
-                <p className="text-xs text-slate-500 mt-1">
-                  Processed: {new Date(currentResult.timestamp).toLocaleDateString()} at {new Date(currentResult.timestamp).toLocaleTimeString()}
-                </p>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Official Simplification Study</span>
+                <h1 className="text-xl font-bold text-gray-900 mt-0.5">{currentResult.title || "Regulatory Circular"}</h1>
+                <p className="text-xs text-gray-500 mt-1">Processed: {new Date(currentResult.timestamp).toLocaleDateString()} at {new Date(currentResult.timestamp).toLocaleTimeString()}</p>
               </div>
               <div className="text-right">
-                <span className="text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-1 rounded">
-                  Language Dialect: {selectedLang === "te" ? "Telugu (తెలుగు)" : selectedLang === "hi" ? "Hindi (हिन्दी)" : "English (Simplified)"}
+                <span className="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-1 rounded">
+                  Language: {selectedLang === "te" ? "Telugu (తెలుగు)" : selectedLang === "hi" ? "Hindi (हिन्दी)" : "English (Simplified)"}
                 </span>
               </div>
             </div>
           </div>
-
-          {/* Section 1: Executive Summary */}
           <div className="mb-6">
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">Executive Summary</h3>
-            <p className="text-xs text-slate-800 bg-slate-50 border border-slate-200 p-3 rounded leading-relaxed italic">
-              {currentResult.summary}
-            </p>
+            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Executive Summary</h3>
+            <p className="text-xs text-gray-800 bg-gray-50 border border-gray-200 p-3 rounded leading-relaxed italic">{currentResult.summary}</p>
           </div>
-
-          {/* Section 2: Side-by-Side Clause Alignment */}
           <div>
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 border-b border-slate-200 pb-1.5">
-              Detailed Clause Comparison
-            </h3>
+            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4 border-b border-gray-200 pb-1.5">Detailed Clause Comparison</h3>
             <div className="space-y-4">
               {(() => {
                 const originalSentences = splitIntoSentences(currentResult.originalText);
-                const activeSimplifiedText = selectedLang === "te" 
-                  ? currentResult.teluguTranslation 
-                  : selectedLang === "hi" 
-                    ? currentResult.hindiTranslation 
-                    : currentResult.simplifiedEnglish;
+                const activeSimplifiedText = selectedLang === "te" ? currentResult.teluguTranslation : selectedLang === "hi" ? currentResult.hindiTranslation : currentResult.simplifiedEnglish;
                 const simplifiedSentences = splitIntoSentences(activeSimplifiedText);
-
                 return originalSentences.map((orig, i) => {
                   const simpIdx = getMatchedSimplifiedIndex(i, originalSentences, simplifiedSentences);
                   const simp = simplifiedSentences[simpIdx] || "(No direct translation found)";
                   return (
-                    <div key={i} className="grid grid-cols-2 gap-6 border-b border-slate-100 pb-4 last:border-0 page-break-inside-avoid">
-                      <div className="text-xs text-slate-800 leading-relaxed pr-2">
-                        <div className="font-bold text-red-800 mb-1 flex items-center gap-1.5 font-mono">
-                          <span className="w-4 h-4 bg-red-100 rounded-sm flex items-center justify-center text-[10px]">
-                            {i + 1}
-                          </span>
-                          ORIGINAL LEGALESE
-                        </div>
+                    <div key={i} className="grid grid-cols-2 gap-6 border-b border-gray-100 pb-4 last:border-0">
+                      <div className="text-xs text-gray-800 leading-relaxed pr-2">
+                        <div className="font-bold text-red-800 mb-1 font-mono">#{i + 1} ORIGINAL</div>
                         <p className="whitespace-pre-line leading-relaxed">{orig.trim()}</p>
                       </div>
-                      <div className="text-xs text-slate-900 leading-relaxed pl-2 border-l border-slate-200">
-                        <div className="font-bold text-green-800 mb-1 flex items-center gap-1.5 font-mono">
-                          <span className="w-4 h-4 bg-green-100 rounded-sm flex items-center justify-center text-[10px]">
-                            {i + 1}
-                          </span>
-                          CITIZEN TRANSFORMATION
-                        </div>
+                      <div className="text-xs text-gray-900 leading-relaxed pl-2 border-l border-gray-200">
+                        <div className="font-bold text-green-800 mb-1 font-mono">#{i + 1} SIMPLIFIED</div>
                         <p className="whitespace-pre-line leading-relaxed">{simp.trim()}</p>
                       </div>
                     </div>
@@ -2474,32 +1746,25 @@ export default function App() {
               })()}
             </div>
           </div>
-
-          {/* Glossary section */}
           {currentResult.glossary && currentResult.glossary.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-slate-200 page-break-inside-avoid">
-              <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
-                Jargon Encyclopedia (Indian Legal Terminology)
-              </h3>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Glossary</h3>
+              <dl className="grid grid-cols-2 gap-4">
                 {currentResult.glossary.map((item, idx) => (
                   <div key={idx} className="text-xs leading-relaxed">
-                    <dt className="font-bold text-slate-800 mb-0.5">{item.term}</dt>
-                    <dd className="text-slate-600">{item.definition}</dd>
+                    <dt className="font-bold text-gray-800 mb-0.5">{item.term}</dt>
+                    <dd className="text-gray-600">{item.definition}</dd>
                   </div>
                 ))}
               </dl>
             </div>
           )}
-
-          {/* Footer watermark */}
-          <div className="mt-12 border-t border-slate-200 pt-3 text-center">
-            <p className="text-[10px] text-slate-400">
-              Digitally Simplified & Translated by Indian Citizen Legislation simplifying portal.
-            </p>
+          <div className="mt-12 border-t border-gray-200 pt-3 text-center">
+            <p className="text-[10px] text-gray-400">Digitally Simplified & Translated by DocuEase — Indian Citizen Legislation Portal.</p>
           </div>
         </div>
       )}
+
     </div>
   );
 }
