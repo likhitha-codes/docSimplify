@@ -468,14 +468,14 @@ Your mission is to perform these operations:
    - Detect whether the content is related to an official Indian government, legal matter, public utility, municipal sector, welfare program, state/central notification, judicial filing, or relevant public policy issue in India. Set "isGovernmentRelated" to true if so, otherwise false.
    - Categorize the exact "documentType", picking from or describing similar official genres: e.g., "Government Order", "Circular", "Welfare Scheme", "Tax & Customs Notice", "Judiciary Brief", "Public Notice", "Advisory", or "General Policy Brief".
 2. Simplification & Metadata Generation:
-   - Give the document a standard human-readable, respectful "title" (e.g. "Pradhan Mantri Awas Yojana Guideline", "MCD Circular on Taxation").
-   - Extract a 1-sentence "summary" of the document.
-   - Simplify the legalistic, technical, or complex jargon of the document into "simplifiedEnglish" written at a clear, 8th-grade readability level (designed for ease of standard understanding).
+   - Give the document a standard human-readable, respectful "title".
+   - Write a "summary" of 3–4 sentences covering: what the document is, who it belongs to (use their actual name), its key purpose, and the most important date or condition.
+   - For "simplifiedEnglish": Your job is to LIST EVERY PIECE OF ACTUAL DATA from the document AND explain what it means. Do NOT write generic theory. For every field present in the document, state the field name and then its exact value as it appears, followed by a brief plain-language explanation of what that value means. Use SECTION LABELS IN CAPS followed by a colon to group related fields. DO NOT use markdown, asterisks, pound signs, or bullet dashes. Example format: "DOCUMENT NUMBER: MP19R-2021-0224441. This is the unique ID for this licence." Include every name, date, number, address, category, validity period, authority, condition, and any other data visible in the document. After listing all data, add a short "WHAT THIS MEANS FOR YOU" section explaining practical implications. Target length: 350–450 words.
 3. Translation:
    - Accurately translate this simplified text into Telugu ("teluguTranslation"). Maintain high cultural precision and clean official Telugu lexicon. Avoid reading numbers incorrectly. Even if the source document was in Telugu, Hindi, or mixed, provide a high-quality, fully translated simplified Telugu output.
    - Accurately translate this simplified text into Hindi ("hindiTranslation"). Use standard official yet easy-to-read Devanagari. Even if the source document was in Telugu, Hindi, or mixed, provide a high-quality, fully translated simplified Hindi output.
 4. Glossary Generation:
-   - Extract up to 6 complex legal, financial, or bureaucratic terms appearing in the document (mapped to their English terms if written in regional scripts or translated) and map each to a simple, plain-language explanation in "glossary" (term & definition).
+   - Extract up to 10 complex legal, financial, or bureaucratic terms appearing in the document (mapped to their English terms if written in regional scripts or translated) and map each to a simple, plain-language explanation in "glossary" (term & definition).
 
 Return ONLY valid JSON with exactly these fields:
 {
@@ -496,8 +496,15 @@ Ensure Telugu and Hindi texts are fully translated and returned in elegant unico
     console.log(`[Groq API] Sending request to llama-3.3-70b-versatile...`);
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: finalPrompt }],
-      response_format: { type: "json_object" }
+      messages: [
+        {
+          role: "system",
+          content: "You are a government document analyst. Your primary job is to extract and state every actual value, number, name, date, and field from the document verbatim, then explain what each means in plain English. You NEVER write generic theory without the actual data. You NEVER say 'the document contains a name' — you say 'NAME: Sardar Singh. This is the person this licence belongs to.' You use CAPS LABELS with colons for sections. No markdown, no asterisks, no pound signs, no bullet dashes."
+        },
+        { role: "user", content: finalPrompt }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 8000
     });
     console.log(`[Groq API] Response received.`);
 

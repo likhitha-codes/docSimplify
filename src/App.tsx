@@ -1464,10 +1464,25 @@ export default function App() {
                           {/* English */}
                           <div className="flex flex-col">
                             <span className="text-[10px] bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded uppercase inline-block mb-3 w-fit">Simplified English</span>
-                            <div className="text-sm leading-relaxed text-gray-800 flex-1" id="english_simplified_text">
-                              {splitIntoSentences(currentResult.simplifiedEnglish).map((sent, sIdx) => (
-                                <span key={sIdx} className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}>{sent}{" "}</span>
-                              ))}
+                            <div className="text-sm leading-relaxed text-gray-800 flex-1 space-y-3" id="english_simplified_text">
+                              {currentResult.simplifiedEnglish.split(/\n+/).map((para, pIdx) => {
+                                const cleaned = para.replace(/\*\*/g, "").trim();
+                                if (!cleaned) return null;
+                                const isHeading = /^#+\s/.test(cleaned);
+                                const text = cleaned.replace(/^#+\s*/, "");
+                                if (isHeading) {
+                                  return <p key={pIdx} className="font-bold text-gray-900 mt-2">{text}</p>;
+                                }
+                                const sentences = splitIntoSentences(text);
+                                const offset = currentResult.simplifiedEnglish.split(/\n+/).slice(0, pIdx).reduce((acc, p) => acc + splitIntoSentences(p.replace(/^#+\s*/, "").replace(/\*\*/g, "")).length, 0);
+                                return (
+                                  <p key={pIdx}>
+                                    {sentences.map((sent, sIdx) => (
+                                      <span key={sIdx} className={speakingSentenceIndex === offset + sIdx ? "speech-highlight" : ""}>{sent}{" "}</span>
+                                    ))}
+                                  </p>
+                                );
+                              })}
                             </div>
                             <div className="pt-4 mt-auto flex gap-2">
                               <button
@@ -1498,16 +1513,26 @@ export default function App() {
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase inline-block mb-3 w-fit ${selectedLang === "te" ? "bg-amber-50 text-amber-700" : "bg-orange-50 text-orange-700"}`}>
                                 {selectedLang === "te" ? "Telugu | తెలుగు" : "Hindi | हिन्दी"}
                               </span>
-                              <div className="text-sm leading-relaxed text-gray-800 flex-1 tracking-wide" id="translated_target_text">
-                                {selectedLang === "te" ? (
-                                  splitIntoSentences(currentResult.teluguTranslation).map((sent, sIdx) => (
-                                    <span key={sIdx} className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}>{sent}{" "}</span>
-                                  ))
-                                ) : (
-                                  splitIntoSentences(currentResult.hindiTranslation).map((sent, sIdx) => (
-                                    <span key={sIdx} className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}>{sent}{" "}</span>
-                                  ))
-                                )}
+                              <div className="text-sm leading-relaxed text-gray-800 flex-1 tracking-wide space-y-3" id="translated_target_text">
+                                {(selectedLang === "te" ? currentResult.teluguTranslation : currentResult.hindiTranslation)
+                                  .split(/\n+/)
+                                  .map((para, pIdx) => {
+                                    const cleaned = para.replace(/\*\*/g, "").trim();
+                                    if (!cleaned) return null;
+                                    const isHeading = /^#+\s/.test(cleaned);
+                                    const text = cleaned.replace(/^#+\s*/, "");
+                                    if (isHeading) {
+                                      return <p key={pIdx} className="font-bold text-gray-900 mt-2">{text}</p>;
+                                    }
+                                    const sentences = splitIntoSentences(text);
+                                    return (
+                                      <p key={pIdx}>
+                                        {sentences.map((sent, sIdx) => (
+                                          <span key={sIdx} className={speakingSentenceIndex === sIdx ? "speech-highlight" : ""}>{sent}{" "}</span>
+                                        ))}
+                                      </p>
+                                    );
+                                  })}
                               </div>
                               {currentResult.glossary && currentResult.glossary.length > 0 && (
                                 <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
